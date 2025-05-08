@@ -3,18 +3,12 @@ use dotenv::dotenv;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct ConnectorConfig {
-    pub log: LogConfig,
-    pub collections: Vec<CollectionConfig>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
 pub struct LogConfig {
     pub level: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct CollectionConfig {
+pub struct Collection {
     pub db_name: String,
     pub coll_name: String,
     pub change_stream_pre_and_post_images: bool,
@@ -27,7 +21,8 @@ pub struct CollectionConfig {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
-    pub connector: ConnectorConfig,
+    pub log: LogConfig,
+    pub collections: Vec<Collection>,
 }
 
 impl Settings {
