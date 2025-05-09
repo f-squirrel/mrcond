@@ -1,2 +1,3 @@
 [workspace]
+resolver = "2"
 members = ["mongodb_rabbitmq_connector", "mongodb_rabbitmq_connectord"]
