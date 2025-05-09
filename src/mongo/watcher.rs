@@ -4,7 +4,18 @@ use crate::rabbitmq::publisher::Publisher;
 use bson;
 use futures_util::stream::StreamExt;
 use mongodb::{bson::Document, Client};
+use thiserror::Error;
 use tracing::{debug, error, info};
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("MongoDB error: {0}")]
+    Mongo(#[from] mongodb::error::Error),
+    #[error("Publisher error: {0}")]
+    Publisher(#[from] crate::rabbitmq::publisher::Error),
+    #[error("BSON serialization error: {0}")]
+    Bson(#[from] bson::ser::Error),
+}
 
 pub struct Watcher {
     client: Client,
@@ -19,7 +30,7 @@ impl Watcher {
         watched: WatchedDb,
         resume_tokens: ResumeTokensDB,
         publisher: Publisher,
-    ) -> mongodb::error::Result<Self> {
+    ) -> Result<Self, Error> {
         Ok(Self {
             client,
             watched,
@@ -28,7 +39,7 @@ impl Watcher {
         })
     }
 
-    pub async fn watch(&self, stream_name: &str) -> mongodb::error::Result<()> {
+    pub async fn watch(&self, stream_name: &str) -> Result<(), Error> {
         let collection = self
             .client
             .database(&self.watched.db_name)
@@ -49,7 +60,7 @@ impl Watcher {
 
                     if let Err(e) = self.publisher.publish(&change).await {
                         error!(error = %e, "Failed to publish change event to RabbitMQ");
-                        break;
+                        return Err(Error::Publisher(e));
                     }
                     if let Some(token) = change_stream.resume_token() {
                         if let Err(e) = self
@@ -58,13 +69,13 @@ impl Watcher {
                             .await
                         {
                             error!(error = %e, "Failed to save resume token");
-                            break;
+                            return Err(Error::Mongo(e));
                         }
                     }
                 }
                 Err(e) => {
                     error!(error = %e, "Change stream error");
-                    break;
+                    return Err(Error::Mongo(e));
                 }
             }
         }
