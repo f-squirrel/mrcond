@@ -1,6 +1,6 @@
 //! Main entry point for the binary daemon
 use mongodb_rabbitmq_connector::config::Settings;
-use mongodb_rabbitmq_connector::server::ConnectorServer;
+use mongodb_rabbitmq_connector::ConnectorServer;
 use tracing_subscriber;
 
 #[tokio::main]

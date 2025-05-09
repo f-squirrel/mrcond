@@ -14,11 +14,11 @@ pub enum Error {
     Mongo(#[from] mongodb::error::Error),
 }
 
-pub struct ConnectorServer {
+pub struct Server {
     settings: Settings,
 }
 
-impl ConnectorServer {
+impl Server {
     pub fn new(settings: Settings) -> Self {
         Self { settings }
     }
