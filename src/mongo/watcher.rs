@@ -1,4 +1,5 @@
-use mongodb::Client;
+use futures_util::stream::StreamExt;
+use mongodb::{bson::Document, Client};
 
 pub struct Watcher {
     pub client: Client,
@@ -21,5 +22,27 @@ impl Watcher {
             change_stream_pre_and_post_images,
         }
     }
-    // ...methods for change stream monitoring...
+
+    pub async fn watch(&self) -> mongodb::error::Result<()> {
+        let collection = self
+            .client
+            .database(&self.db_name)
+            .collection::<Document>(&self.coll_name);
+        let mut change_stream = collection.watch().await?;
+        println!(
+            "Started watching collection: {}.{}",
+            self.db_name, self.coll_name
+        );
+        while let Some(event) = change_stream.next().await {
+            match event {
+                Ok(change) => {
+                    println!("Change event: {:?}", change);
+                }
+                Err(e) => {
+                    eprintln!("Change stream error: {e}");
+                }
+            }
+        }
+        Ok(())
+    }
 }
