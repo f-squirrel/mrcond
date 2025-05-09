@@ -19,14 +19,14 @@ pub enum Error {
     Serde(#[from] serde_json::Error),
 }
 
-pub struct Watcher {
+pub struct Connector {
     client: Client,
     watched: WatchedDb,
     resume_tokens: ResumeTokensDB,
     publisher: Publisher,
 }
 
-impl Watcher {
+impl Connector {
     pub async fn from_collection(
         mongo_uri: &str,
         rabbitmq_uri: &str,
