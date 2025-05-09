@@ -48,10 +48,10 @@ impl ResumeTokensDB {
     pub async fn set_last_resume_token(
         &self,
         stream_name: &str,
-        resume_token: ResumeToken,
+        resume_token: &ResumeToken,
     ) -> mongodb::error::Result<()> {
         let filter = doc! {"stream_name": stream_name};
-        let update = doc! {"$set": {"resume_token": bson::to_bson(&resume_token)?}};
+        let update = doc! {"$set": {"resume_token": bson::to_bson(resume_token)?}};
         self.collection.update_one(filter, update).await?;
         Ok(())
     }

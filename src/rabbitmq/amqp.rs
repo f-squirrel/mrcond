@@ -7,7 +7,7 @@ use lapin::{
 };
 use mongodb::{bson::Document, change_stream::event::ChangeStreamEvent};
 use serde_json;
-use tracing::info;
+use tracing::trace;
 
 pub struct Publisher {
     pub config: RabbitMq,
@@ -41,7 +41,7 @@ impl Publisher {
             )
             .await?
             .await?;
-        info!(queue = %self.config.stream_name, "Published message to RabbitMQ");
+        trace!(queue = %self.config.stream_name, "Published message to RabbitMQ, payload: {}", serde_json::to_string(event)?);
         Ok(())
     }
 }

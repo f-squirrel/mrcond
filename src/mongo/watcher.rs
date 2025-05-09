@@ -5,7 +5,7 @@ use bson;
 use futures_util::stream::StreamExt;
 use mongodb::{bson::Document, Client};
 use thiserror::Error;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -13,6 +13,8 @@ pub enum Error {
     Mongo(#[from] mongodb::error::Error),
     #[error("RabbitMq error: {0}")]
     RabbitMq(#[from] crate::rabbitmq::Error),
+    #[error("Serde error: {0}")]
+    Serde(#[from] serde_json::Error),
 }
 
 pub struct Watcher {
@@ -63,12 +65,13 @@ impl Watcher {
 
             if let Some(token) = change_stream.resume_token() {
                 self.resume_tokens
-                    .set_last_resume_token(stream_name, token)
+                    .set_last_resume_token(stream_name, &token)
                     .await
                     .map_err(|e| {
                         error!(error = %e, "Failed to save resume token");
                         e
                     })?;
+                debug!("Saved resume token: {}", serde_json::to_string(&token)?);
             } else {
                 warn!("No resume token found in change event");
             }
