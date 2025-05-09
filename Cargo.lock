@@ -1743,6 +1743,7 @@ dependencies = [
  "config",
  "mongodb_rabbitmq_connector",
  "tokio",
+ "tracing",
  "tracing-subscriber",
 ]
 

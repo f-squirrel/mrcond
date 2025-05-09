@@ -6,5 +6,6 @@ edition = "2021"
 [dependencies]
 mongodb_rabbitmq_connector = { path = "../mongodb_rabbitmq_connector" }
 tokio.workspace = true
+tracing.workspace = true
 tracing-subscriber.workspace = true
 config.workspace = true

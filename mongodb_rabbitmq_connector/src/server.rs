@@ -54,7 +54,7 @@ impl ConnectorServer {
         })
     }
 
-    async fn serve(&self) -> Result<(), Error> {
+    pub async fn serve(&self) -> Result<(), Error> {
         use tokio::sync::mpsc;
 
         let (tx, mut rx) = mpsc::unbounded_channel();
