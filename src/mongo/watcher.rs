@@ -46,12 +46,10 @@ impl Watcher {
             match event {
                 Ok(change) => {
                     debug!(?change, "Change event");
-                    // TODO(DD): Extract relevant data from the change event
-                   
-                    // Publish the change event to RabbitMQ
+
                     if let Err(e) = self.publisher.publish(&change).await {
                         error!(error = %e, "Failed to publish change event to RabbitMQ");
-                        // TODO(DD): Handle error (e.g., retry, log, etc.)
+                        break;
                     }
                     if let Some(token) = change_stream.resume_token() {
                         if let Err(e) = self
@@ -70,6 +68,7 @@ impl Watcher {
                 }
             }
         }
+
         Ok(())
     }
 }
