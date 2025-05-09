@@ -10,7 +10,10 @@ pub struct ResumeTokensDB {
 }
 
 impl ResumeTokensDB {
-    pub async fn new(client: Client, config: config::ResumeTokensDB) -> mongodb::error::Result<Self> {
+    pub async fn new(
+        client: Client,
+        config: config::ResumeTokensDB,
+    ) -> mongodb::error::Result<Self> {
         let db = client.database(&config.tokens_db_name);
         let collection = db.collection::<Document>(&config.tokens_coll_name);
         // Optionally create capped collection if requested
