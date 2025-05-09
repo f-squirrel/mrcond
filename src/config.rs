@@ -3,11 +3,6 @@ use dotenv::dotenv;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct LogConfig {
-    pub level: String,
-}
-
-#[derive(Debug, Deserialize, Clone)]
 pub struct Collection {
     pub db_name: String,
     pub coll_name: String,
@@ -21,7 +16,6 @@ pub struct Collection {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
-    pub log: LogConfig,
     pub collections: Vec<Collection>,
 }
 
