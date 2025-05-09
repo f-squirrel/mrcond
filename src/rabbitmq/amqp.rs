@@ -48,10 +48,7 @@ impl Publisher {
 
 #[async_trait::async_trait]
 impl Publish for Publisher {
-    async fn publish(
-        &self,
-        event: &mongodb::change_stream::event::ChangeStreamEvent<mongodb::bson::Document>,
-    ) -> Result<(), crate::rabbitmq::Error> {
+    async fn publish(&self, event: &ChangeStreamEvent<Document>) -> Result<(), Error> {
         self.publish(event).await
     }
 }
