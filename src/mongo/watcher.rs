@@ -1,5 +1,6 @@
 use crate::config::WatchedDb;
 use crate::mongo::resume_tokens::ResumeTokensDB;
+use crate::rabbitmq::publisher::Publisher;
 use bson;
 use futures_util::stream::StreamExt;
 use mongodb::{bson::Document, Client};
@@ -9,6 +10,7 @@ pub struct Watcher {
     client: Client,
     watched: WatchedDb,
     resume_tokens: ResumeTokensDB,
+    publisher: Publisher,
 }
 
 impl Watcher {
@@ -16,11 +18,13 @@ impl Watcher {
         client: Client,
         watched: WatchedDb,
         resume_tokens: ResumeTokensDB,
+        publisher: Publisher,
     ) -> mongodb::error::Result<Self> {
         Ok(Self {
             client,
             watched,
             resume_tokens,
+            publisher,
         })
     }
 
@@ -42,7 +46,13 @@ impl Watcher {
             match event {
                 Ok(change) => {
                     debug!(?change, "Change event");
-
+                    // TODO(DD): Extract relevant data from the change event
+                   
+                    // Publish the change event to RabbitMQ
+                    if let Err(e) = self.publisher.publish(&change).await {
+                        error!(error = %e, "Failed to publish change event to RabbitMQ");
+                        // TODO(DD): Handle error (e.g., retry, log, etc.)
+                    }
                     if let Some(token) = change_stream.resume_token() {
                         if let Err(e) = self
                             .resume_tokens
