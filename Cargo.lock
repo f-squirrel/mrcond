@@ -1660,6 +1660,7 @@ dependencies = [
 name = "mongo-rabbitmq-connector"
 version = "0.1.0"
 dependencies = [
+ "bson",
  "config",
  "dotenv",
  "env_logger",
