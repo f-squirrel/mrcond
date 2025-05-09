@@ -1,6 +1,7 @@
 use config::{Config, ConfigError, Environment};
 use dotenv::dotenv;
 use serde::Deserialize;
+use tracing::{debug, error, info, trace, warn};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct WatchedDb {

@@ -1,5 +1,6 @@
 use futures_util::stream::StreamExt;
 use mongodb::{bson::Document, Client};
+use tracing::{debug, error, info};
 
 pub struct Watcher {
     pub client: Client,
@@ -29,17 +30,14 @@ impl Watcher {
             .database(&self.db_name)
             .collection::<Document>(&self.coll_name);
         let mut change_stream = collection.watch().await?;
-        println!(
-            "Started watching collection: {}.{}",
-            self.db_name, self.coll_name
-        );
+        info!(db = %self.db_name, coll = %self.coll_name, "Started watching collection");
         while let Some(event) = change_stream.next().await {
             match event {
                 Ok(change) => {
-                    println!("Change event: {:?}", change);
+                    debug!(?change, "Change event");
                 }
                 Err(e) => {
-                    eprintln!("Change stream error: {e}");
+                    error!(error = %e, "Change stream error");
                 }
             }
         }
