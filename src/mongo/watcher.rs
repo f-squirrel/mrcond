@@ -5,7 +5,7 @@ use bson;
 use futures_util::stream::StreamExt;
 use mongodb::{bson::Document, Client};
 use thiserror::Error;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -53,33 +53,30 @@ impl Watcher {
 
         let mut change_stream = collection.watch().resume_after(resume_token).await?;
         info!(db = %self.watched.db_name, coll = %self.watched.coll_name, "Started watching collection");
-        while let Some(event) = change_stream.next().await {
-            match event {
-                Ok(change) => {
-                    debug!(?change, "Change event");
 
-                    if let Err(e) = self.publisher.publish(&change).await {
-                        error!(error = %e, "Failed to publish change event to RabbitMQ");
-                        return Err(Error::Publisher(e));
-                    }
-                    if let Some(token) = change_stream.resume_token() {
-                        if let Err(e) = self
-                            .resume_tokens
-                            .set_last_resume_token(stream_name, bson::to_bson(&token)?)
-                            .await
-                        {
-                            error!(error = %e, "Failed to save resume token");
-                            return Err(Error::Mongo(e));
-                        }
-                    }
-                }
-                Err(e) => {
-                    error!(error = %e, "Change stream error");
-                    return Err(Error::Mongo(e));
-                }
+        while let Some(change) = change_stream.next().await.transpose().map_err(|e| {
+            error!(error = %e, "Change stream error");
+            e
+        })? {
+            self.publisher.publish(&change).await.map_err(|e| {
+                error!(error = %e, "Failed to publish change event to RabbitMQ");
+                e
+            })?;
+
+            if let Some(token) = change_stream.resume_token() {
+                self.resume_tokens
+                    .set_last_resume_token(stream_name, bson::to_bson(&token)?)
+                    .await
+                    .map_err(|e| {
+                        error!(error = %e, "Failed to save resume token");
+                        e
+                    })?;
+            } else {
+                warn!("No resume token found in change event");
             }
         }
 
+        // TODO(DD): Add an error saying that the collection was dropped
         Ok(())
     }
 }
