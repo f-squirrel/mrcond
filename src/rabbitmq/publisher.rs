@@ -3,6 +3,7 @@ use lapin::{
     options::BasicPublishOptions, publisher_confirm::Confirmation, types::FieldTable,
     BasicProperties, Channel, Connection, ConnectionProperties,
 };
+use mongodb::{bson::Document, change_stream::event::ChangeStreamEvent};
 use serde_json;
 use thiserror::Error;
 use tracing::info;
@@ -34,8 +35,8 @@ impl Publisher {
         Ok(Self { config, channel })
     }
 
-    pub async fn publish<T: serde::Serialize>(&self, message: &T) -> Result<(), Error> {
-        let payload = serde_json::to_vec(message)?;
+    pub async fn publish(&self, event: &ChangeStreamEvent<Document>) -> Result<(), Error> {
+        let payload = serde_json::to_vec(event)?;
         let _confirm: Confirmation = self
             .channel
             .basic_publish(
