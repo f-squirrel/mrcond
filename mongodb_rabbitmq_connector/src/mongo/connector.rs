@@ -63,11 +63,15 @@ impl Connector {
             .database(&self.watched.db_name)
             .collection::<Document>(&self.watched.coll_name);
 
+        debug!(db = %self.watched.db_name, coll = %self.watched.coll_name, "Watching collection");
+
         let resume_token = self
             .resume_tokens
             .get_last_resume_token(stream_name)
             .await?
             .and_then(|b| bson::from_bson(b).ok());
+
+        debug!(db = %self.watched.db_name, "Watching collection");
 
         let mut change_stream = collection.watch().resume_after(resume_token).await?;
         info!(db = %self.watched.db_name, coll = %self.watched.coll_name, "Started watching collection");
