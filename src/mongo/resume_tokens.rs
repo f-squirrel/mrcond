@@ -1,34 +1,23 @@
+use crate::config::ResumeTokensDB;
 use mongodb::{
     bson::{doc, Bson, Document},
-    Client, Collection, Database,
+    Client, Collection,
 };
 use tracing::error;
 
 pub struct ResumeTokens {
-    pub client: Client,
-    pub tokens_db_name: String,
-    pub tokens_coll_name: String,
-    pub tokens_coll_capped: Option<bool>,
-    pub tokens_coll_size_in_bytes: Option<u64>,
-    db: Database,
     collection: Collection<Document>,
 }
 
 impl ResumeTokens {
-    pub async fn new(
-        client: Client,
-        tokens_db_name: String,
-        tokens_coll_name: String,
-        tokens_coll_capped: Option<bool>,
-        tokens_coll_size_in_bytes: Option<u64>,
-    ) -> mongodb::error::Result<Self> {
-        let db = client.database(&tokens_db_name);
-        let collection = db.collection::<Document>(&tokens_coll_name);
+    pub async fn new(client: Client, config: ResumeTokensDB) -> mongodb::error::Result<Self> {
+        let db = client.database(&config.tokens_db_name);
+        let collection = db.collection::<Document>(&config.tokens_coll_name);
         // Optionally create capped collection if requested
-        if let Some(true) = tokens_coll_capped {
-            let size = tokens_coll_size_in_bytes.unwrap_or(4096) as i64;
+        if let Some(true) = config.tokens_coll_capped {
+            let size = config.tokens_coll_size_in_bytes.unwrap_or(4096) as i64;
             let options_doc = doc! {"capped": true, "size": size};
-            let mut create_cmd = doc! {"create": &tokens_coll_name};
+            let mut create_cmd = doc! {"create": &config.tokens_coll_name};
             create_cmd.extend(options_doc);
             // Try to create the collection, ignore error if it already exists
             if let Err(e) = db.run_command(create_cmd).await {
@@ -38,15 +27,7 @@ impl ResumeTokens {
                 }
             }
         }
-        Ok(Self {
-            client,
-            tokens_db_name,
-            tokens_coll_name,
-            tokens_coll_capped,
-            tokens_coll_size_in_bytes,
-            db,
-            collection,
-        })
+        Ok(Self { collection })
     }
 
     pub async fn get_last_resume_token(
