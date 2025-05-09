@@ -4,6 +4,7 @@ use crate::config::Settings;
 use crate::mongo::resume_tokens::ResumeTokensDB;
 use crate::mongo::watcher::Watcher;
 use crate::rabbitmq::{amqp, Publisher};
+use futures_util::stream;
 use mongodb::Client;
 use std::sync::Arc;
 use thiserror::Error;
@@ -34,8 +35,7 @@ impl ConnectorServer {
             let resume_tokens =
                 ResumeTokensDB::new(client.clone(), collection.resume_tokens.clone()).await?;
             let amqp_publisher =
-                amqp::Publisher::new(collection.rabbitmq.clone(), &self.settings.rabbitmq_uri)
-                    .await?;
+                amqp::Publisher::new(&collection.rabbitmq, &self.settings.rabbitmq_uri).await?;
             let publisher = Publisher::new(Arc::new(amqp_publisher));
             let watcher = Watcher::new(
                 client.clone(),
@@ -44,19 +44,13 @@ impl ConnectorServer {
                 publisher,
             )
             .await?;
-            watcher
-                .watch(&collection.rabbitmq.stream_name)
-                .await
-                .map_err(|e| {
-                    error!(error = ?e, "Failed to watch collection");
-                    e
-                })?;
+            let stream_name = collection.rabbitmq.stream_name.clone();
             // In production, spawn each watcher as a task
-            // tokio::spawn(async move {
-            //     if let Err(e) = watcher.watch(&collection.rabbitmq.stream_name).await {
-            //         error!(error = ?e, "Watcher failed");
-            //     }
-            // });
+            let handle = tokio::spawn(async move {
+                if let Err(e) = watcher.watch(&stream_name).await {
+                    error!(error = ?e, "Watcher failed");
+                }
+            });
         }
         info!("Connector server started");
         // Keep running
@@ -65,12 +59,9 @@ impl ConnectorServer {
     }
 
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        // let x = tokio::spawn(self.do_run()).await;
-
-        // self.do_run().await.map_err(|e| {
-        //     error!(error = ?e, "Connector server failed");
-        //     e
-        // })
-        Ok(())
+        self.do_run().await.map_err(|e| {
+            error!(error = ?e, "Connector server failed");
+            Box::new(e) as Box<dyn std::error::Error>
+        })
     }
 }

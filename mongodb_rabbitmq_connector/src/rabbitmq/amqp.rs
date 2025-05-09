@@ -15,7 +15,7 @@ pub struct Publisher {
 }
 
 impl Publisher {
-    pub async fn new(config: RabbitMq, rabbitmq_uri: &str) -> Result<Self, Error> {
+    pub async fn new(config: &RabbitMq, rabbitmq_uri: &str) -> Result<Self, Error> {
         let conn = Connection::connect(rabbitmq_uri, ConnectionProperties::default()).await?;
         let channel = conn.create_channel().await?;
         channel
@@ -25,7 +25,10 @@ impl Publisher {
                 FieldTable::default(),
             )
             .await?;
-        Ok(Self { config, channel })
+        Ok(Self {
+            config: config.clone(),
+            channel,
+        })
     }
 
     pub async fn publish(&self, event: &ChangeStreamEvent<Document>) -> Result<(), Error> {
