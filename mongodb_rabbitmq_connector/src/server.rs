@@ -63,12 +63,14 @@ impl ConnectorServer {
 
         // Spawn all jobs
         for collection in collections {
-            Self::spawn(settings.clone(), collection.clone(), tx.clone());
+            info!(collection = %collection.watched.coll_name, "Starting connector for collection");
+            Self::spawn(settings.clone(), collection, tx.clone());
         }
 
         info!("Connector server started");
 
         while let Some(collection) = rx.recv().await {
+            info!(collection = %collection.watched.coll_name, "Restarting connector for collection");
             Self::spawn(self.settings.clone(), collection, tx.clone());
         }
         Ok(())
