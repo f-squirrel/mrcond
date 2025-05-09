@@ -11,8 +11,8 @@ use tracing::{error, info, warn};
 pub enum Error {
     #[error("MongoDB error: {0}")]
     Mongo(#[from] mongodb::error::Error),
-    #[error("Publisher error: {0}")]
-    Publisher(#[from] crate::rabbitmq::Error),
+    #[error("RabbitMq error: {0}")]
+    RabbitMq(#[from] crate::rabbitmq::Error),
 }
 
 pub struct Watcher {
