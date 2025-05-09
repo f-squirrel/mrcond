@@ -5,7 +5,7 @@ use bson;
 use futures_util::stream::StreamExt;
 use mongodb::{bson::Document, Client};
 use thiserror::Error;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -13,8 +13,6 @@ pub enum Error {
     Mongo(#[from] mongodb::error::Error),
     #[error("Publisher error: {0}")]
     Publisher(#[from] crate::rabbitmq::publisher::Error),
-    #[error("BSON serialization error: {0}")]
-    Bson(#[from] bson::ser::Error),
 }
 
 pub struct Watcher {
@@ -65,7 +63,7 @@ impl Watcher {
 
             if let Some(token) = change_stream.resume_token() {
                 self.resume_tokens
-                    .set_last_resume_token(stream_name, bson::to_bson(&token)?)
+                    .set_last_resume_token(stream_name, token)
                     .await
                     .map_err(|e| {
                         error!(error = %e, "Failed to save resume token");
