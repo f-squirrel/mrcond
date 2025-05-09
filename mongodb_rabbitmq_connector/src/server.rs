@@ -1,14 +1,7 @@
 //! Server module for running the connector as a service
 
 use crate::config::Settings;
-use crate::mongo::resume_tokens::ResumeTokensDB;
-use crate::mongo::connector::Connector;
-use crate::rabbitmq::{amqp, Publisher};
-use lapin::protocol::connection;
-use mongodb::Client;
-use std::sync::Arc;
 use thiserror::Error;
-use tokio::sync::watch;
 use tracing::{error, info};
 
 #[derive(Debug, Error)]
