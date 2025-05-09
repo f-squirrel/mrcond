@@ -1,3 +1,4 @@
+use super::error::Error;
 use super::publish::Publish;
 use crate::config::RabbitMq;
 use lapin::{
@@ -7,8 +8,6 @@ use lapin::{
 use mongodb::{bson::Document, change_stream::event::ChangeStreamEvent};
 use serde_json;
 use tracing::info;
-
-use super::Error;
 
 pub struct Publisher {
     pub config: RabbitMq,
