@@ -1,16 +1,16 @@
-use crate::config::ResumeTokensDB;
+use crate::config;
 use mongodb::{
     bson::{doc, Bson, Document},
     Client, Collection,
 };
 use tracing::error;
 
-pub struct ResumeTokens {
+pub struct ResumeTokensDB {
     collection: Collection<Document>,
 }
 
-impl ResumeTokens {
-    pub async fn new(client: Client, config: ResumeTokensDB) -> mongodb::error::Result<Self> {
+impl ResumeTokensDB {
+    pub async fn new(client: Client, config: config::ResumeTokensDB) -> mongodb::error::Result<Self> {
         let db = client.database(&config.tokens_db_name);
         let collection = db.collection::<Document>(&config.tokens_coll_name);
         // Optionally create capped collection if requested

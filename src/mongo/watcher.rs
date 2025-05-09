@@ -1,5 +1,5 @@
 use crate::config::WatchedDb;
-use crate::mongo::resume_tokens::ResumeTokens;
+use crate::mongo::resume_tokens::ResumeTokensDB;
 use bson;
 use futures_util::stream::StreamExt;
 use mongodb::{bson::Document, Client};
@@ -8,14 +8,14 @@ use tracing::{debug, error, info};
 pub struct Watcher {
     pub client: Client,
     pub watched: WatchedDb,
-    pub resume_tokens: ResumeTokens,
+    pub resume_tokens: ResumeTokensDB,
 }
 
 impl Watcher {
     pub async fn new(
         client: Client,
         watched: WatchedDb,
-        resume_tokens: ResumeTokens,
+        resume_tokens: ResumeTokensDB,
     ) -> mongodb::error::Result<Self> {
         Ok(Self {
             client,
