@@ -6,9 +6,9 @@ use mongodb::{bson::Document, Client};
 use tracing::{debug, error, info};
 
 pub struct Watcher {
-    pub client: Client,
-    pub watched: WatchedDb,
-    pub resume_tokens: ResumeTokensDB,
+    client: Client,
+    watched: WatchedDb,
+    resume_tokens: ResumeTokensDB,
 }
 
 impl Watcher {
