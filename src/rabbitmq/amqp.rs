@@ -5,16 +5,9 @@ use lapin::{
 };
 use mongodb::{bson::Document, change_stream::event::ChangeStreamEvent};
 use serde_json;
-use thiserror::Error;
 use tracing::info;
 
-#[derive(Debug, Error)]
-pub enum Error {
-    #[error("Lapin error: {0}")]
-    Lapin(#[from] lapin::Error),
-    #[error("Serialization error: {0}")]
-    Serde(#[from] serde_json::Error),
-}
+use super::Error;
 
 pub struct Publisher {
     pub config: RabbitMq,
