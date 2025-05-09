@@ -1,5 +1,7 @@
-mod amqp;
+pub mod amqp;
+pub mod publish;
 pub use amqp::Publisher;
+
 use thiserror::Error;
 
 #[derive(Debug, Error)]

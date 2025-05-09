@@ -1,3 +1,4 @@
+use super::publish::Publish;
 use crate::config::RabbitMq;
 use lapin::{
     options::BasicPublishOptions, publisher_confirm::Confirmation, types::FieldTable,
@@ -43,5 +44,15 @@ impl Publisher {
             .await?;
         info!(queue = %self.config.stream_name, "Published message to RabbitMQ");
         Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl Publish for Publisher {
+    async fn publish(
+        &self,
+        event: &mongodb::change_stream::event::ChangeStreamEvent<mongodb::bson::Document>,
+    ) -> Result<(), crate::rabbitmq::Error> {
+        self.publish(event).await
     }
 }
