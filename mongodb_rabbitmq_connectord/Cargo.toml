@@ -1,0 +1,7 @@
+[package]
+name = "mongodb_rabbitmq_connectord"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mongodb_rabbitmq_connector = { path = "../mongodb_rabbitmq_connector" }

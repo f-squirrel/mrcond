@@ -1657,25 +1657,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mongo-rabbitmq-connector"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bson",
- "config",
- "dotenv",
- "env_logger",
- "futures-util",
- "lapin",
- "mongodb",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "mongodb"
 version = "3.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1734,6 +1715,32 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.101",
+]
+
+[[package]]
+name = "mongodb_rabbitmq_connector"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bson",
+ "config",
+ "dotenv",
+ "env_logger",
+ "futures-util",
+ "lapin",
+ "mongodb",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "mongodb_rabbitmq_connectord"
+version = "0.1.0"
+dependencies = [
+ "mongodb_rabbitmq_connector",
 ]
 
 [[package]]
