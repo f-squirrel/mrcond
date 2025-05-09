@@ -24,8 +24,11 @@ pub struct RabbitMq {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Collection {
+    #[serde(flatten)]
     pub watched: WatchedDb,
+    #[serde(flatten)]
     pub resume_tokens: ResumeTokensDB,
+    #[serde(flatten)]
     pub rabbitmq: RabbitMq,
 }
 

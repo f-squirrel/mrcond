@@ -57,7 +57,7 @@ impl Connector {
         })
     }
 
-    pub async fn watch(&self, stream_name: &str) -> Result<(), Error> {
+    pub async fn connect(&self, stream_name: &str) -> Result<(), Error> {
         let collection = self
             .client
             .database(&self.watched.db_name)
