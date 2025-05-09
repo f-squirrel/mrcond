@@ -1,30 +1,25 @@
+use crate::config::WatchedDb;
 use crate::mongo::resume_tokens::ResumeTokens;
 use bson;
 use futures_util::stream::StreamExt;
-use mongodb::{bson::Document, change_stream::event::ResumeToken, Client};
+use mongodb::{bson::Document, Client};
 use tracing::{debug, error, info};
 
 pub struct Watcher {
     pub client: Client,
-    pub db_name: String,
-    pub coll_name: String,
-    pub change_stream_pre_and_post_images: bool,
+    pub watched: WatchedDb,
     pub resume_tokens: ResumeTokens,
 }
 
 impl Watcher {
     pub async fn new(
         client: Client,
-        db_name: String,
-        coll_name: String,
-        change_stream_pre_and_post_images: bool,
+        watched: WatchedDb,
         resume_tokens: ResumeTokens,
     ) -> mongodb::error::Result<Self> {
         Ok(Self {
             client,
-            db_name,
-            coll_name,
-            change_stream_pre_and_post_images,
+            watched,
             resume_tokens,
         })
     }
@@ -32,8 +27,8 @@ impl Watcher {
     pub async fn watch(&self, stream_name: &str) -> mongodb::error::Result<()> {
         let collection = self
             .client
-            .database(&self.db_name)
-            .collection::<Document>(&self.coll_name);
+            .database(&self.watched.db_name)
+            .collection::<Document>(&self.watched.coll_name);
 
         let resume_token = self
             .resume_tokens
@@ -42,7 +37,7 @@ impl Watcher {
             .and_then(|b| bson::from_bson(b).ok());
 
         let mut change_stream = collection.watch().resume_after(resume_token).await?;
-        info!(db = %self.db_name, coll = %self.coll_name, "Started watching collection");
+        info!(db = %self.watched.db_name, coll = %self.watched.coll_name, "Started watching collection");
         while let Some(event) = change_stream.next().await {
             match event {
                 Ok(change) => {
