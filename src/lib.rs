@@ -1,2 +1,2 @@
 mod config;
-mod mongo;
+pub mod mongo;
