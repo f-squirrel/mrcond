@@ -5,7 +5,7 @@ WORKDIR /app
 COPY . .
 RUN cargo build --release -p mongodb_rabbitmq_connectord
 
-FROM debian:bullseye-slim
+FROM ubuntu:24.04
 
 WORKDIR /app
 COPY --from=builder /app/target/release/mongodb_rabbitmq_connectord /app/mongodb_rabbitmq_connectord
