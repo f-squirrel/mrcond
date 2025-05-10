@@ -1,20 +1,33 @@
 //! Main entry point for the binary daemon
-use config::Config;
+use clap::Parser;
 use mongodb_rabbitmq_connector::config::{Collection, Connections, Settings};
 use mongodb_rabbitmq_connector::ConnectorServer;
+
+/// MongoDB-RabbitMQ Connector Daemon
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// Path to config file (YAML)
+    #[arg(short, long, default_value = "/app/config.yaml")]
+    config: String,
+    /// Prefix for environment variables
+    #[arg(short, long, default_value = "MRQCONN")]
+    prefix: String,
+}
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
     tracing_subscriber::fmt::init();
-    let config = Config::builder()
-        .add_source(config::File::with_name("/app/config.yaml"))
+    let cli = Cli::parse();
+    let config = config::Config::builder()
+        .add_source(config::File::with_name(&cli.config))
         .build()
         .unwrap();
 
     let collections = config.try_deserialize::<Vec<Collection>>().unwrap();
 
-    let config = Config::builder()
-        .add_source(config::Environment::default().prefix("MRQCONN"))
+    let config = config::Config::builder()
+        .add_source(config::Environment::default().prefix(&cli.prefix))
         .build()
         .unwrap();
 
