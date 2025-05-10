@@ -1,4 +1,5 @@
 //! Main entry point for the binary daemon
+use anyhow::Result;
 use clap::Parser;
 use mongodb_rabbitmq_connector::config::{Collection, Connections, Settings};
 use mongodb_rabbitmq_connector::ConnectorServer;
@@ -16,31 +17,26 @@ struct Cli {
 }
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
-async fn main() {
+async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let cli = Cli::parse();
-    let config = config::Config::builder()
-        .add_source(config::File::with_name(&cli.config))
-        .build()
-        .unwrap();
-
-    let collections = config.try_deserialize::<Vec<Collection>>().unwrap();
 
     let config = config::Config::builder()
         .add_source(config::Environment::default().prefix(&cli.prefix))
-        .build()
-        .unwrap();
+        .build()?;
+    let connections = config.try_deserialize::<Connections>()?;
 
-    let connections = config.try_deserialize::<Connections>().unwrap();
+    let config = config::Config::builder()
+        .add_source(config::File::with_name(&cli.config))
+        .build()?;
+
+    let collections = config.try_deserialize::<Vec<Collection>>()?;
 
     let settings = Settings {
         connections,
         collections,
     };
-
     let server = ConnectorServer::new(settings);
-    if let Err(e) = server.serve().await {
-        tracing::error!(error = %e, "Connector server failed");
-        std::process::exit(1);
-    }
+    server.serve().await?;
+    Ok(())
 }
