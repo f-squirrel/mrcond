@@ -22,17 +22,19 @@ pub struct RabbitMq {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Collection {
-    #[serde(flatten)]
     pub watched: WatchedDb,
-    #[serde(flatten)]
     pub resume_tokens: ResumeTokensDB,
-    #[serde(flatten)]
     pub rabbitmq: RabbitMq,
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct Settings {
+pub struct Connections {
     pub mongo_uri: String,
     pub rabbitmq_uri: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Settings {
+    pub connections: Connections,
     pub collections: Vec<Collection>,
 }

@@ -32,8 +32,8 @@ impl Server {
         tokio::spawn(async move {
             loop {
                 match crate::mongo::connector::Connector::from_collection(
-                    &settings.mongo_uri,
-                    &settings.rabbitmq_uri,
+                    &settings.connections.mongo_uri,
+                    &settings.connections.rabbitmq_uri,
                     &collection,
                 )
                 .await

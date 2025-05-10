@@ -1,6 +1,6 @@
 //! Main entry point for the binary daemon
 use config::Config;
-use mongodb_rabbitmq_connector::config::Settings;
+use mongodb_rabbitmq_connector::config::{Collection, Connections, Settings};
 use mongodb_rabbitmq_connector::ConnectorServer;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
@@ -11,7 +11,19 @@ async fn main() {
         .build()
         .unwrap();
 
-    let settings = config.try_deserialize::<Settings>().unwrap();
+    let collections = config.try_deserialize::<Vec<Collection>>().unwrap();
+
+    let config = Config::builder()
+        .add_source(config::Environment::default().prefix("MRQCONN"))
+        .build()
+        .unwrap();
+
+    let connections = config.try_deserialize::<Connections>().unwrap();
+
+    let settings = Settings {
+        connections,
+        collections,
+    };
 
     let server = ConnectorServer::new(settings);
     if let Err(e) = server.serve().await {
