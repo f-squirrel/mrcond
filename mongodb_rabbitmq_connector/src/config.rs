@@ -1,5 +1,3 @@
-use config::{Config, ConfigError, Environment};
-use dotenv::dotenv;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -37,13 +35,4 @@ pub struct Settings {
     pub mongo_uri: String,
     pub rabbitmq_uri: String,
     pub collections: Vec<Collection>,
-}
-
-impl Settings {
-    pub fn from_env() -> Result<Self, ConfigError> {
-        dotenv().ok();
-        let mut cfg = Config::builder();
-        cfg = cfg.add_source(Environment::default().separator("__"));
-        cfg.build()?.try_deserialize()
-    }
 }
