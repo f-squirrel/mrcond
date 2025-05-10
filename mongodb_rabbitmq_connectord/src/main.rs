@@ -2,7 +2,6 @@
 use config::Config;
 use mongodb_rabbitmq_connector::config::Settings;
 use mongodb_rabbitmq_connector::ConnectorServer;
-use tracing_subscriber;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
