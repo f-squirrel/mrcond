@@ -32,8 +32,8 @@ services:
       - mongodb
       - rabbitmq
     environment:
-      MONGO_URI: "mongodb://root:example@mongodb:27017/"
-      RABBITMQ_URI: "amqp://guest:guest@rabbitmq:5672/"
+      MRQCONN_MONGO_URI: "mongodb://root:example@mongodb:27017/"
+      MRQCONN_RABBITMQ_URI: "amqp://guest:guest@rabbitmq:5672/"
     volumes:
       - ./config.yaml:/app/config.yaml:ro
       - ./target/release/mongodb_rabbitmq_connectord:/app/mongodb_rabbitmq_connectord:ro
