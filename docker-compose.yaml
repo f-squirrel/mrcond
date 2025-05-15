@@ -10,6 +10,13 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: example
     volumes:
       - mongo_data:/data/db
+    command: [ "sh", "-c", "mongod --replSet rs0 --bind_ip_all --port 27017" ]
+    healthcheck:
+      test: [ "CMD", "sh", "-c", "echo 'try { rs.status() } catch (e) { rs.initiate({_id: \"rs0\", members: [{_id: 0, host: \"mongodb:27017\"}]}) }' | mongosh --quiet --port 27017" ]
+      interval: 1s
+      timeout: 10s
+      start_period: 0s
+      retries: 5
 
   rabbitmq:
     image: rabbitmq:3-management
