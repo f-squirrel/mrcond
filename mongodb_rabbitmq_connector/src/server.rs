@@ -16,6 +16,13 @@ pub enum Error {
     Mongo(#[from] mongodb::error::Error),
 }
 
+/// Supervisor for running and restarting MongoDB-to-RabbitMQ connector jobs.
+///
+/// The `Server` manages the lifecycle of connector tasks for each configured collection. It supervises
+/// connector jobs, restarts them on failure, and provides a main entrypoint for running the connector as a service.
+///
+/// Fields:
+/// - `settings`: Application settings, including all collection and connection configuration.
 pub struct Server {
     settings: Settings,
 }
@@ -23,10 +30,15 @@ pub struct Server {
 const RETRY_DELAY: Duration = Duration::from_secs(5);
 
 impl Server {
+    /// Create a new `Server` with the given settings.
     pub fn new(settings: Settings) -> Self {
         Self { settings }
     }
 
+    /// Spawn a connector job for a specific collection.
+    ///
+    /// This function supervises the connector: if the connector fails to start or run, it will retry after a delay.
+    /// On error, the collection is sent back to the parent for restart.
     fn spawn(
         settings: Settings,
         collection: crate::config::Collection,
@@ -58,6 +70,13 @@ impl Server {
         })
     }
 
+    /// Run the connector server, supervising all collection jobs.
+    ///
+    /// This method spawns a connector job for each configured collection and supervises their lifecycle.
+    /// If a job fails, it is restarted. The server runs until all jobs have exited or the process is terminated.
+    ///
+    /// # Errors
+    /// Returns an error if a fatal error occurs in the supervision loop.
     pub async fn serve(&self) -> Result<(), Error> {
         use tokio::sync::mpsc;
 
