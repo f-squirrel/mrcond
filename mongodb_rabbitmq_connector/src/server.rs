@@ -8,12 +8,8 @@ use tracing::{error, info};
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Watcher error: {0}")]
-    Watcher(#[from] crate::mongo::connector::Error),
-    #[error("RabbitMQ error: {0}")]
-    RabbitMq(#[from] crate::rabbitmq::Error),
-    #[error("MongoDB error: {0}")]
-    Mongo(#[from] mongodb::error::Error),
+    #[error("Connector error: {0}")]
+    Connector(#[from] crate::mongo::connector::Error),
 }
 
 /// Supervisor for running and restarting MongoDB-to-RabbitMQ connector jobs.
