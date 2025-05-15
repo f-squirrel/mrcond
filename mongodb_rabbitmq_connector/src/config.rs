@@ -27,7 +27,7 @@ pub struct Collection {
     pub rabbitmq: RabbitMq,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Default, Deserialize, Clone)]
 pub struct Connections {
     pub mongo_uri: String,
     pub rabbitmq_uri: String,
@@ -35,6 +35,7 @@ pub struct Connections {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
+    #[serde(skip)]
     pub connections: Connections,
     pub collections: Vec<Collection>,
 }

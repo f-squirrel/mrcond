@@ -1,7 +1,7 @@
 //! Main entry point for the binary daemon
 use anyhow::Result;
 use clap::Parser;
-use mongodb_rabbitmq_connector::config::{Collection, Connections, Settings};
+use mongodb_rabbitmq_connector::config::{Connections, Settings};
 use mongodb_rabbitmq_connector::ConnectorServer;
 
 /// MongoDB-RabbitMQ Connector Daemon
@@ -30,11 +30,11 @@ async fn main() -> Result<()> {
         .add_source(config::File::with_name(&cli.config))
         .build()?;
 
-    let collections = config.try_deserialize::<Vec<Collection>>()?;
+    let settings = config.try_deserialize::<Settings>()?;
 
     let settings = Settings {
         connections,
-        collections,
+        collections: settings.collections,
     };
     let server = ConnectorServer::new(settings);
     server.serve().await?;

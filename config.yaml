@@ -1,6 +1,4 @@
 # Example config.yaml for the connector
-mongo_uri: "mongodb://root:example@mongodb:27017/"
-rabbitmq_uri: "amqp://guest:guest@rabbitmq:5672/"
 collections:
   - watched:
       db_name: "test"
