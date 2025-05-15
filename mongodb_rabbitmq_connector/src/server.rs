@@ -1,5 +1,7 @@
 //! Server module for running the connector as a service
 
+use std::time::Duration;
+
 use crate::config::Settings;
 use thiserror::Error;
 use tracing::{error, info};
@@ -17,6 +19,8 @@ pub enum Error {
 pub struct Server {
     settings: Settings,
 }
+
+const RETRY_DELAY: Duration = Duration::from_secs(5);
 
 impl Server {
     pub fn new(settings: Settings) -> Self {
@@ -46,8 +50,8 @@ impl Server {
                         break;
                     }
                     Err(e) => {
-                        tracing::error!(error = ?e, collection = %coll_name, "Failed to create connector, retrying in 5s");
-                        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                        tracing::error!(error = ?e, collection = %coll_name, "Failed to create connector, retrying in {RETRY_DELAY:?}");
+                        tokio::time::sleep(RETRY_DELAY).await;
                     }
                 }
             }

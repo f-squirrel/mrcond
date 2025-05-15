@@ -80,6 +80,7 @@ impl Connector {
             error!(error = %e, "Change stream error");
             e
         })? {
+            debug!(db = %self.watched.db_name, coll = %self.watched.coll_name, "Received change event: {:?}", change);
             self.publisher.publish(&change).await.map_err(|e| {
                 error!(error = %e, "Failed to publish change event to RabbitMQ");
                 e
