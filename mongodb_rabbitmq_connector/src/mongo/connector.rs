@@ -71,7 +71,7 @@ impl Connector {
             .await?
             .and_then(|b| bson::from_bson(b).ok());
 
-        debug!(db = %self.watched.db_name, "Watching collection");
+        debug!(db = %self.watched.db_name, "Watching collection, resume token: {:?}", resume_token);
 
         let mut change_stream = collection.watch().resume_after(resume_token).await?;
         info!(db = %self.watched.db_name, coll = %self.watched.coll_name, "Started watching collection");

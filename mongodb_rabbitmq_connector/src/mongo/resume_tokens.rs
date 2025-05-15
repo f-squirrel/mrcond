@@ -52,7 +52,15 @@ impl ResumeTokensDB {
     ) -> mongodb::error::Result<()> {
         let filter = doc! {"stream_name": stream_name};
         let update = doc! {"$set": {"resume_token": bson::to_bson(resume_token)?}};
-        self.collection.update_one(filter, update).await?;
+
+        // Use upsert: true to insert if not exists, or update if exists
+        let options = mongodb::options::UpdateOptions::builder()
+            .upsert(true)
+            .build();
+        self.collection
+            .update_one(filter, update)
+            .with_options(Some(options))
+            .await?;
         Ok(())
     }
 }
