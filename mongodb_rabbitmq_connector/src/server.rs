@@ -58,7 +58,8 @@ impl Server {
                         if let Err(e) = connector.connect(&collection.watched.coll_name).await {
                             tracing::error!(error = ?e, collection = %coll_name, "Watcher failed, notifying parent");
                         }
-                        let _ = tx.send(collection.clone());
+                        tx.send(collection.clone())
+                            .expect("Failed to report failure to parent");
                         break;
                     }
                     Err(e) => {
