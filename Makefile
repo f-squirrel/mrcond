@@ -15,6 +15,9 @@ build-debug:
 clean:
 	cargo clean
 
+down:
+	docker compose down
+
 run:
 	docker compose up
 
