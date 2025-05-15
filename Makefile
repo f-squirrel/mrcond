@@ -16,7 +16,7 @@ clean:
 	cargo clean
 
 run:
-	docker compose up
+	docker compose up --build
 
 check:
 	cargo check --workspace
