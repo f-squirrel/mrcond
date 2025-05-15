@@ -33,7 +33,7 @@ impl Publisher {
 
     pub async fn publish(&self, event: &ChangeStreamEvent<Document>) -> Result<(), Error> {
         let payload = serde_json::to_vec(event)?;
-        let _confirm: Confirmation = self
+        let confirm: Confirmation = self
             .channel
             .basic_publish(
                 "",
@@ -44,7 +44,7 @@ impl Publisher {
             )
             .await?
             .await?;
-        trace!(queue = %self.config.stream_name, "Published message to RabbitMQ, payload: {}", serde_json::to_string(event)?);
+        trace!(queue = %self.config.stream_name, "Published message to RabbitMQ, payload: {}, confirmation: {:?}", serde_json::to_string(event)?, confirm);
         Ok(())
     }
 }
