@@ -34,6 +34,11 @@ impl ResumeTokensDB {
         Ok(Self { collection })
     }
 
+    pub async fn clean(&self) -> mongodb::error::Result<()> {
+        self.collection.delete_many(doc! {}).await?;
+        Ok(())
+    }
+
     pub async fn get_last_resume_token(
         &self,
         stream_name: &str,

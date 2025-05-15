@@ -100,7 +100,9 @@ impl Connector {
             }
         }
 
-        // TODO(DD): Add an error saying that the collection was dropped
+        warn!("Collection dropped, stopping watcher, dropping resume tokens");
+        self.resume_tokens.clean().await?;
+
         Ok(())
     }
 }
