@@ -2,9 +2,9 @@
 
 .PHONY: all build build-release build-debug clean run check format help
 
-all: build-release
+all: build-debug
 
-build: build-release
+build: build-debug
 
 build-release:
 	cargo build --workspace --release
