@@ -3,5 +3,4 @@ FROM ubuntu:24.04
 
 WORKDIR /app
 COPY ./config.yaml /app/config.yaml
-COPY ../target/release/mongodb_rabbitmq_connectord /app/mongodb_rabbitmq_connectord
-CMD ["/app/mongodb_rabbitmq_connectord", "/app/config.yaml"]
+CMD ["/app/mongodb_rabbitmq_connectord", "--config", "/app/config.yaml"]
