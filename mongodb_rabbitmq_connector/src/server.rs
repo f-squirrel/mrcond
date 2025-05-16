@@ -8,8 +8,12 @@ use tracing::{error, info};
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Connector error: {0}")]
-    Connector(#[from] crate::mongo::connector::Error),
+    #[error("Connector error in collection '{collection:?}': {source}")]
+    Connector {
+        #[source]
+        source: crate::mongo::connector::Error,
+        collection: crate::config::Collection,
+    },
 }
 
 /// Supervisor for running and restarting MongoDB-to-RabbitMQ connector jobs.
@@ -31,40 +35,35 @@ impl Server {
         Self { settings }
     }
 
-    /// Spawn a connector job for a specific collection.
-    ///
-    /// This function supervises the connector: if the connector fails to start or run, it will retry after a delay.
-    /// On error, the collection is sent back to the parent for restart.
-    fn spawn(
+    async fn spawn_task(
         settings: Settings,
         collection: crate::config::Collection,
-        tx: tokio::sync::mpsc::UnboundedSender<crate::config::Collection>,
-    ) -> tokio::task::JoinHandle<()> {
+    ) -> Result<(), Error> {
         let coll_name = collection.watched.coll_name.clone();
-        tokio::spawn(async move {
-            loop {
-                match crate::mongo::connector::Connector::from_collection(
-                    &settings.connections.mongo_uri,
-                    &settings.connections.rabbitmq_uri,
-                    &collection,
-                )
-                .await
-                {
-                    Ok(connector) => {
-                        if let Err(e) = connector.connect(&collection.watched.coll_name).await {
-                            tracing::error!(error = ?e, collection = %coll_name, "Watcher failed, notifying parent");
+        loop {
+            match crate::mongo::connector::Connector::from_collection(
+                &settings.connections.mongo_uri,
+                &settings.connections.rabbitmq_uri,
+                &collection,
+            )
+            .await
+            {
+                Ok(connector) => {
+                    let x = connector.connect(&collection.watched.coll_name).await;
+                    return x.map_err(|e| {
+                        tracing::error!(error = ?e, collection = %coll_name, "Watcher failed, notifying parent");
+                        Error::Connector {
+                            source: e,
+                            collection: collection.clone(),
                         }
-                        tx.send(collection.clone())
-                            .expect("Failed to report failure to parent");
-                        break;
-                    }
-                    Err(e) => {
-                        tracing::error!(error = ?e, collection = %coll_name, "Failed to create connector, retrying in {RETRY_DELAY:?}");
-                        tokio::time::sleep(RETRY_DELAY).await;
-                    }
+                    });
+                }
+                Err(e) => {
+                    tracing::error!(error = ?e, collection = %coll_name, "Failed to create connector, retrying in {RETRY_DELAY:?}");
+                    tokio::time::sleep(RETRY_DELAY).await;
                 }
             }
-        })
+        }
     }
 
     /// Run the connector server, supervising all collection jobs.
@@ -75,24 +74,43 @@ impl Server {
     /// # Errors
     /// Returns an error if a fatal error occurs in the supervision loop.
     pub async fn serve(&self) -> Result<(), Error> {
-        use tokio::sync::mpsc;
+        use tokio::task::JoinSet;
 
-        let (tx, mut rx) = mpsc::unbounded_channel();
         let collections = self.settings.collections.clone();
         let settings = self.settings.clone();
+        let mut join_set = JoinSet::new();
 
-        // Spawn all jobs
         for collection in collections {
             info!(collection = %collection.watched.coll_name, "Starting connector for collection");
-            Self::spawn(settings.clone(), collection, tx.clone());
+            let settings = settings.clone();
+            join_set.spawn(Server::spawn_task(settings, collection));
         }
 
         info!("Connector server started");
-
-        while let Some(collection) = rx.recv().await {
-            info!(collection = %collection.watched.coll_name, "Restarting connector for collection");
-            Self::spawn(self.settings.clone(), collection, tx.clone());
+        while let Some(res) = join_set.join_next().await {
+            match res {
+                Ok(Ok(_)) => {
+                    error!("Connector task finished due to collection drop, not restarting");
+                }
+                Ok(Err(e)) => {
+                    error!(error = ?e, "Connector task failed, restarting");
+                    match e {
+                        Error::Connector {
+                            source: _,
+                            collection,
+                        } => {
+                            join_set.spawn(Server::spawn_task(settings.clone(), collection));
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!(error = ?e, "Connector task panicked, not restarting");
+                }
+            }
         }
+
+        info!("Connector server tasks are finished");
+
         Ok(())
     }
 }
