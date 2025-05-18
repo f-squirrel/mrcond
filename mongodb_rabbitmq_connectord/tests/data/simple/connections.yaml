@@ -1,0 +1,2 @@
+mongo_uri: "mongodb://localhost:27017"
+rabbitmq_uri: "amqp://guest:guest@localhost:5672/"

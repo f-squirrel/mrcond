@@ -1722,9 +1722,14 @@ name = "mongodb_rabbitmq_connectord"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bson",
  "clap",
  "config",
+ "lapin",
+ "mongodb",
  "mongodb_rabbitmq_connector",
+ "serde",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",

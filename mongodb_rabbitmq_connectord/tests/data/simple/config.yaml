@@ -1,0 +1,13 @@
+collections:
+  - watched:
+      db_name: "test"
+      coll_name: "testcoll"
+      change_stream_pre_and_post_images: false
+    resume_tokens:
+      tokens_db_name: "test"
+      tokens_coll_name: "resume_tokens"
+      tokens_coll_capped: true
+      tokens_coll_size_in_bytes: 1048576
+    rabbitmq:
+      stream_name: "testqueue"
+

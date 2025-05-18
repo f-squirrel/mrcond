@@ -42,7 +42,7 @@ services:
     environment:
       MRQCONN_MONGO_URI: "mongodb://root:example@mongodb:27017/"
       MRQCONN_RABBITMQ_URI: "amqp://guest:guest@rabbitmq:5672/my_vhost"
-      RUST_LOG: "mongodb_rabbitmq_connector=trace,mongodb_rabbitmq_connectord=trace"
+      RUST_LOG: "mongodb_rabbitmq_connector=trace,mongodb_rabbitmq_connectord=trace,lapin=debug"
 
     volumes:
       - ./config.yaml:/app/config.yaml:ro

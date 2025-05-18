@@ -1,6 +1,6 @@
 # Makefile for mongodb-rabbitmq-connector workspace
 
-.PHONY: all build build-release build-debug clean run check format help
+.PHONY: all build build-release build-debug clean run check format help venv test-integration
 
 all: build-debug
 
@@ -23,6 +23,9 @@ run:
 
 check:
 	cargo check --workspace
+
+clippy:
+	cargo clippy --workspace
 
 format:
 	cargo fmt --all
