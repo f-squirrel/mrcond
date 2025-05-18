@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use crate::config::Settings;
 use thiserror::Error;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -82,15 +82,14 @@ impl Server {
 
         for collection in collections {
             info!(collection = %collection.watched.coll_name, "Starting connector for collection");
-            let settings = settings.clone();
-            join_set.spawn(Server::spawn_task(settings, collection));
+            join_set.spawn(Self::spawn_task(settings.clone(), collection));
         }
 
         info!("Connector server started");
         while let Some(res) = join_set.join_next().await {
             match res {
                 Ok(Ok(_)) => {
-                    error!("Connector task finished due to collection drop, not restarting");
+                    warn!("Connector task finished due to collection drop, not restarting");
                 }
                 Ok(Err(e)) => {
                     error!(error = ?e, "Connector task failed, restarting");
