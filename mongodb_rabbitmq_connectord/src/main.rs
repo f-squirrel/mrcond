@@ -1,8 +1,10 @@
 //! Main entry point for the binary daemon
 use anyhow::Result;
+use axum::{routing::get, Router};
 use clap::Parser;
 use mongodb_rabbitmq_connector::config::{Connections, Settings};
 use mongodb_rabbitmq_connector::ConnectorServer;
+use std::net::SocketAddr;
 
 /// MongoDB-RabbitMQ Connector Daemon
 #[derive(Parser, Debug)]
@@ -21,6 +23,15 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let cli = Cli::parse();
 
+    let health_api = tokio::spawn(async move {
+        async fn health() -> &'static str {
+            "OK"
+        }
+        let app = Router::new().route("/health", get(health));
+        let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+        axum::serve(listener, app).await
+    });
+
     let config = config::Config::builder()
         .add_source(config::Environment::default().prefix(&cli.prefix))
         .build()?;
@@ -36,7 +47,14 @@ async fn main() -> Result<()> {
         connections,
         collections: settings.collections,
     };
-    let server = ConnectorServer::new(settings);
-    server.serve().await?;
+
+    let server = tokio::spawn(async move {
+        let server = ConnectorServer::new(settings);
+        server.serve().await
+    });
+
+    let (health_res, server_res) = tokio::try_join!(health_api, server)?;
+    health_res?;
+    server_res?;
     Ok(())
 }
