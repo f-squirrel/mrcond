@@ -76,7 +76,7 @@ impl Server {
     pub async fn serve(&self) -> Result<(), Error> {
         use tokio::task::JoinSet;
 
-        let collections = self.settings.collections().clone();
+        let collections = self.settings.collections();
         let settings = self.settings.clone();
         let mut join_set = JoinSet::new();
 
