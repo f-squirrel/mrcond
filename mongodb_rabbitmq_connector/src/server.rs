@@ -42,8 +42,8 @@ impl Server {
         let coll_name = collection.watched.coll_name.clone();
         loop {
             match crate::mongo::connector::Connector::from_collection(
-                &settings.connections.mongo_uri,
-                &settings.connections.rabbitmq_uri,
+                &settings.connections().mongo_uri,
+                &settings.connections().rabbitmq_uri,
                 &collection,
             )
             .await
@@ -76,13 +76,13 @@ impl Server {
     pub async fn serve(&self) -> Result<(), Error> {
         use tokio::task::JoinSet;
 
-        let collections = self.settings.collections.clone();
+        let collections = self.settings.collections().clone();
         let settings = self.settings.clone();
         let mut join_set = JoinSet::new();
 
         for collection in collections {
             info!(collection = %collection.watched.coll_name, "Starting connector for collection");
-            join_set.spawn(Self::spawn_task(settings.clone(), collection));
+            join_set.spawn(Self::spawn_task(settings.clone(), collection.clone()));
         }
 
         info!("Connector server started");

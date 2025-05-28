@@ -4,7 +4,6 @@ use axum::{routing::get, Router};
 use clap::Parser;
 use mongodb_rabbitmq_connector::config::{Connections, Settings};
 use mongodb_rabbitmq_connector::ConnectorServer;
-use std::net::SocketAddr;
 
 /// MongoDB-RabbitMQ Connector Daemon
 #[derive(Parser, Debug)]
@@ -23,15 +22,6 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let cli = Cli::parse();
 
-    let health_api = tokio::spawn(async move {
-        async fn health() -> &'static str {
-            "OK"
-        }
-        let app = Router::new().route("/health", get(health));
-        let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-        axum::serve(listener, app).await
-    });
-
     let config = config::Config::builder()
         .add_source(config::Environment::default().prefix(&cli.prefix))
         .build()?;
@@ -43,10 +33,17 @@ async fn main() -> Result<()> {
 
     let settings = config.try_deserialize::<Settings>()?;
 
-    let settings = Settings {
-        connections,
-        collections: settings.collections,
-    };
+    let settings = Settings::new(connections, settings.collections().to_owned())
+        .map_err(|e| anyhow::anyhow!("Failed to create settings: {}", e))?;
+
+    let health_api = tokio::spawn(async move {
+        async fn health() -> &'static str {
+            "OK"
+        }
+        let app = Router::new().route("/health", get(health));
+        let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
+        axum::serve(listener, app).await
+    });
 
     let server = tokio::spawn(async move {
         let server = ConnectorServer::new(settings);
