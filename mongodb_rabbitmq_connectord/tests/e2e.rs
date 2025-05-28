@@ -175,18 +175,20 @@ async fn test_producer_consumer_init_and_join() {
         .unwrap();
     let connections = config.try_deserialize::<Connections>().unwrap();
 
-    let settings = Settings {
-        connections,
-        collections: settings.collections,
-    };
+    let settings = Settings::new(connections, settings.collections().to_owned())
+        .map_err(|e| anyhow::anyhow!("Failed to create settings: {}", e))
+        .unwrap();
 
     println!("Settings: {:?}", settings);
 
     let mut counter = 0;
     let client = loop {
-        match Client::with_uri_str(settings.connections.mongo_uri.clone()).await {
+        match Client::with_uri_str(settings.connections().mongo_uri.clone()).await {
             Ok(client) => {
-                println!("Connected to MongoDB at {}", settings.connections.mongo_uri);
+                println!(
+                    "Connected to MongoDB at {}",
+                    settings.connections().mongo_uri
+                );
                 break client;
             }
             Err(e) => {
@@ -203,10 +205,10 @@ async fn test_producer_consumer_init_and_join() {
     //     .await
     //     .unwrap();
 
-    let producer = Producer::new(client, &settings.collections[0]).await;
+    let producer = Producer::new(client, &settings.collections()[0]).await;
     let consumer = Consumer::new(
-        &settings.connections.rabbitmq_uri,
-        &settings.collections[0].rabbitmq.stream_name,
+        &settings.connections().rabbitmq_uri,
+        &settings.collections()[0].rabbitmq.stream_name,
     )
     .await
     .unwrap();
