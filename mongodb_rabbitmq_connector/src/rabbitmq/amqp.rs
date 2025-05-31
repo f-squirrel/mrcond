@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::error::Error;
 use super::publish::Publish;
 use crate::config::RabbitMq;
@@ -17,6 +19,8 @@ use tracing::trace;
 pub struct Publisher {
     pub config: RabbitMq,
     channel: Channel,
+    // DD: to hold a connection while the channel is alive
+    _connection: Arc<Connection>,
 }
 
 impl Publisher {
@@ -43,6 +47,41 @@ impl Publisher {
         Ok(Self {
             config: config.clone(),
             channel,
+            _connection: Arc::new(conn),
+        })
+    }
+
+    /// Create a new `Publisher` using an existing RabbitMQ connection.
+    ///
+    /// This is the preferred way to construct a `Publisher` when you plan to create
+    /// multiple publishers that share the same RabbitMQ connection (for example,
+    /// when you want to avoid opening a new TCP connection for each publisher).
+    ///
+    /// # Arguments
+    /// * `config` - RabbitMQ configuration (queue/stream name, etc).
+    /// * `connection` - An existing, shared RabbitMQ `Connection`.
+    ///
+    /// # Returns
+    /// Returns a new `Publisher` instance with its own channel, but sharing the provided connection.
+    ///
+    /// # Errors
+    /// Returns an error if the channel creation or queue declaration fails.
+    pub async fn with_connection(
+        config: RabbitMq,
+        connection: Arc<Connection>,
+    ) -> Result<Self, Error> {
+        let channel = connection.create_channel().await?;
+        channel
+            .queue_declare(
+                &config.stream_name,
+                Default::default(),
+                FieldTable::default(),
+            )
+            .await?;
+        Ok(Self {
+            config,
+            channel,
+            _connection: connection,
         })
     }
 

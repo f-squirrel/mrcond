@@ -62,6 +62,21 @@ impl Connector {
         Self::new(client, settings.watched.clone(), resume_tokens, publisher).await
     }
 
+    pub async fn with_clients(
+        client: Client,
+        rabbitmq_client: Arc<lapin::Connection>,
+        settings: &crate::config::Collection,
+    ) -> Result<Self, Error> {
+        let resume_tokens =
+            ResumeTokensDB::new(client.clone(), settings.resume_tokens.clone()).await?;
+
+        let amqp_publisher =
+            amqp::Publisher::with_connection(settings.rabbitmq.clone(), rabbitmq_client).await?;
+        let publisher = Publisher::new(Arc::new(amqp_publisher));
+
+        Self::new(client, settings.watched.clone(), resume_tokens, publisher).await
+    }
+
     /// Creates a new `Connector` instance from its components.
     ///
     /// This is a lower-level constructor for advanced use cases, allowing direct injection of the MongoDB client,

@@ -1,8 +1,9 @@
 //! Server module for running the connector as a service
 
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
-use crate::config::Settings;
+use crate::{config::Settings, rabbitmq};
+use mongodb::Client;
 use thiserror::Error;
 use tracing::{error, info, warn};
 
@@ -35,15 +36,64 @@ impl Server {
         Self { settings }
     }
 
+    async fn connect_to_mongo(settings: &Settings) -> Result<Client, Error> {
+        loop {
+            match Client::with_uri_str(settings.connections().mongo_uri.as_str()).await {
+                Ok(client) => {
+                    info!("MongoDB connection initialized successfully");
+                    return Ok(client);
+                }
+                Err(e) => {
+                    error!(error = ?e, "Failed to initialize MongoDB connection");
+                    tokio::time::sleep(RETRY_DELAY).await;
+                }
+            }
+        }
+    }
+
+    async fn connect_to_rabbitmq(settings: &Settings) -> Result<Arc<lapin::Connection>, Error> {
+        loop {
+            match lapin::Connection::connect(
+                settings.connections().rabbitmq_uri.as_str(),
+                lapin::ConnectionProperties::default(),
+            )
+            .await
+            {
+                Ok(client) => {
+                    info!("RabbitMQ connection initialized successfully");
+                    return Ok(Arc::new(client));
+                }
+                Err(e) => {
+                    error!(error = ?e, "Failed to initialize RabbitMQ connection");
+                    tokio::time::sleep(RETRY_DELAY).await;
+                }
+            }
+        }
+    }
+
+    /// Connect to MongoDB and RabbitMQ, returning both clients.
+    ///
+    /// This function is independent of `self` and takes a `Settings` reference.
+    async fn connect_clients(
+        settings: &Settings,
+    ) -> Result<(mongodb::Client, Arc<lapin::Connection>), Error> {
+        let (mongo_client, rabbitmq_client) = tokio::try_join!(
+            Self::connect_to_mongo(settings),
+            Self::connect_to_rabbitmq(settings)
+        )?;
+        Ok((mongo_client, rabbitmq_client))
+    }
+
     async fn spawn_task(
-        settings: Settings,
         collection: crate::config::Collection,
+        mongo_client: mongodb::Client,
+        rabbitmq_client: Arc<lapin::Connection>,
     ) -> Result<(), Error> {
         let coll_name = collection.watched.coll_name.clone();
         loop {
-            match crate::mongo::connector::Connector::from_collection(
-                &settings.connections().mongo_uri,
-                &settings.connections().rabbitmq_uri,
+            match crate::mongo::connector::Connector::with_clients(
+                mongo_client.clone(),
+                rabbitmq_client.clone(),
                 &collection,
             )
             .await
@@ -76,13 +126,19 @@ impl Server {
     pub async fn serve(&self) -> Result<(), Error> {
         use tokio::task::JoinSet;
 
+        let (mut mongo_client, mut rabbitmq_client) = Self::connect_clients(&self.settings).await?;
+
         let collections = self.settings.collections();
         let settings = self.settings.clone();
         let mut join_set = JoinSet::new();
 
         for collection in collections {
             info!(collection = %collection.watched.coll_name, "Starting connector for collection");
-            join_set.spawn(Self::spawn_task(settings.clone(), collection.clone()));
+            join_set.spawn(Self::spawn_task(
+                collection.clone(),
+                mongo_client.clone(),
+                rabbitmq_client.clone(),
+            ));
         }
 
         info!("Connector server started");
@@ -94,11 +150,28 @@ impl Server {
                 Ok(Err(e)) => {
                     error!(error = ?e, "Connector task failed, restarting");
                     match e {
-                        Error::Connector {
-                            source: _,
-                            collection,
-                        } => {
-                            join_set.spawn(Server::spawn_task(settings.clone(), collection));
+                        Error::Connector { source, collection } => {
+                            error!(error = ?source, collection = %collection.watched.coll_name, "Connector task failed, restarting");
+                            match source {
+                                crate::mongo::connector::Error::Mongo(_) => {
+                                    info!("Restarting mongo client");
+                                    mongo_client = Self::connect_to_mongo(&settings).await?;
+                                }
+                                crate::mongo::connector::Error::RabbitMq(
+                                    rabbitmq::Error::Lapin(_),
+                                ) => {
+                                    info!("Restarting RabbitMQ client");
+                                    rabbitmq_client = Self::connect_to_rabbitmq(&settings).await?;
+                                }
+                                other => {
+                                    error!(error = ?other, "Unhandled connector error, not restarting");
+                                }
+                            }
+                            join_set.spawn(Server::spawn_task(
+                                collection,
+                                mongo_client.clone(),
+                                rabbitmq_client.clone(),
+                            ));
                         }
                     }
                 }
