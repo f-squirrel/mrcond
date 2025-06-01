@@ -90,30 +90,27 @@ impl Server {
         rabbitmq_client: Arc<lapin::Connection>,
     ) -> Result<(), Error> {
         let coll_name = collection.watched.coll_name.clone();
-        loop {
-            match crate::mongo::connector::Connector::with_clients(
-                mongo_client.clone(),
-                rabbitmq_client.clone(),
-                &collection,
-            )
-            .await
-            {
-                Ok(connector) => {
-                    let x = connector.connect(&collection.watched.coll_name).await;
-                    return x.map_err(|e| {
-                        tracing::error!(error = ?e, collection = %coll_name, "Watcher failed, notifying parent");
-                        Error::Connector {
-                            source: e,
-                            collection: collection.clone(),
-                        }
-                    });
-                }
-                Err(e) => {
-                    tracing::error!(error = ?e, collection = %coll_name, "Failed to create connector, retrying in {RETRY_DELAY:?}");
-                    tokio::time::sleep(RETRY_DELAY).await;
-                }
+        let connector = crate::mongo::connector::Connector::with_clients(
+            mongo_client.clone(),
+            rabbitmq_client.clone(),
+            &collection,
+        )
+        .await
+        .map_err(|e| {
+            tracing::error!(error = ?e, collection = %coll_name, "Failed to create connector");
+            Error::Connector {
+                source: e,
+                collection: collection.clone(),
             }
-        }
+        })?;
+
+        connector.connect(&collection.watched.coll_name).await.map_err(|e| {
+            tracing::error!(error = ?e, collection = %coll_name, "Failed to connect to collection");
+            Error::Connector {
+                source: e,
+                collection: collection.clone(),
+            }
+        })
     }
 
     /// Run the connector server, supervising all collection jobs.
