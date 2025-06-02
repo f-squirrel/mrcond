@@ -126,7 +126,6 @@ impl Server {
         let (mut mongo_client, mut rabbitmq_client) = Self::connect_clients(&self.settings).await?;
 
         let collections = self.settings.collections();
-        let settings = self.settings.clone();
         let mut join_set = JoinSet::new();
 
         for collection in collections {
@@ -144,34 +143,29 @@ impl Server {
                 Ok(Ok(_)) => {
                     warn!("Connector task finished due to collection drop, not restarting");
                 }
-                Ok(Err(e)) => {
-                    error!(error = ?e, "Connector task failed, restarting");
-                    match e {
-                        Error::Connector { source, collection } => {
-                            error!(error = ?source, collection = %collection.watched.coll_name, "Connector task failed, restarting");
-                            match source {
-                                crate::mongo::connector::Error::Mongo(_) => {
-                                    info!("Restarting mongo client");
-                                    mongo_client = Self::connect_to_mongo(&settings).await?;
-                                }
-                                crate::mongo::connector::Error::RabbitMq(
-                                    rabbitmq::Error::Lapin(_),
-                                ) => {
-                                    info!("Restarting RabbitMQ client");
-                                    rabbitmq_client = Self::connect_to_rabbitmq(&settings).await?;
-                                }
-                                other => {
-                                    error!(error = ?other, "Unhandled connector error, not restarting");
-                                }
+                Ok(Err(e)) => match e {
+                    Error::Connector { source, collection } => {
+                        error!(error = ?source, collection = %collection.watched.coll_name, "Connector task failed, restarting");
+                        match source {
+                            crate::mongo::connector::Error::Mongo(_) => {
+                                info!("Restarting mongo client");
+                                mongo_client = Self::connect_to_mongo(&self.settings).await?;
                             }
-                            join_set.spawn(Server::spawn_task(
-                                collection,
-                                mongo_client.clone(),
-                                rabbitmq_client.clone(),
-                            ));
+                            crate::mongo::connector::Error::RabbitMq(rabbitmq::Error::Lapin(_)) => {
+                                info!("Restarting RabbitMQ client");
+                                rabbitmq_client = Self::connect_to_rabbitmq(&self.settings).await?;
+                            }
+                            other => {
+                                error!(error = ?other, "Unhandled connector error, reusing existing clients");
+                            }
                         }
+                        join_set.spawn(Server::spawn_task(
+                            collection,
+                            mongo_client.clone(),
+                            rabbitmq_client.clone(),
+                        ));
                     }
-                }
+                },
                 Err(e) => {
                     error!(error = ?e, "Connector task panicked, not restarting");
                 }
