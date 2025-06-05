@@ -19,7 +19,7 @@ down:
 	docker compose down
 
 run:
-	docker compose up
+	docker compose up --build
 
 check:
 	cargo check --workspace
@@ -29,6 +29,9 @@ clippy:
 
 format:
 	cargo fmt --all
+
+test:
+	cargo test --workspace
 
 help:
 	@echo "Available targets:"
