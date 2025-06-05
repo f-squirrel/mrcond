@@ -1,13 +1,11 @@
-use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
 use bson::Document;
 use lapin::{options::*, types::FieldTable, ConnectionProperties};
+use mongodb::Client;
 use mongodb::Database;
-use mongodb::{bson::doc, Client};
 use mongodb_rabbitmq_connector::config::{Collection, Connections, Settings};
-use serde::Deserialize;
 
 struct Cluster {
     cluster: Child,
@@ -56,8 +54,8 @@ impl Drop for Cluster {
 /// Producer for inserting documents into MongoDB.
 #[derive(Clone)]
 pub struct Producer {
-    client: mongodb::Client,
-    db: Database,
+    _client: mongodb::Client,
+    _db: Database,
     collection: mongodb::Collection<Document>,
 }
 
@@ -66,18 +64,19 @@ impl Producer {
     pub async fn new(client: mongodb::Client, collection: &Collection) -> Self {
         println!("Connecting to MongoDB at {}", collection.watched.db_name);
         let db = client.database(&collection.watched.db_name);
+        println!(
+            "Using collection {} in database {}",
+            collection.watched.coll_name, collection.watched.db_name
+        );
         let collection = db.collection::<Document>(collection.watched.coll_name.as_str());
         Self {
-            client,
-            db,
+            _client: client,
+            _db: db,
             collection,
         }
     }
 
     pub async fn send_bulk(&self, docs: &[serde_json::Value]) -> mongodb::error::Result<()> {
-        println!("deleting");
-        self.collection.delete_many(doc! {}).await?;
-        // println!("deleted");
         if !docs.is_empty() {
             let docs: Vec<_> = docs
                 .iter()
@@ -158,7 +157,7 @@ async fn test_producer_consumer_init_and_join() {
     println!("Current directory: {:?}", base);
 
     let mut cluster = Cluster::start();
-    tokio::time::sleep(Duration::from_secs(30)).await;
+    tokio::time::sleep(Duration::from_secs(10)).await;
 
     let config = config::Config::builder()
         .add_source(config::File::with_name("tests/data/simple/config.yaml"))
@@ -237,6 +236,28 @@ async fn test_producer_consumer_init_and_join() {
     // });
 
     tokio::time::sleep(Duration::from_secs(100)).await; // Wait for producer to send documents
+    let output = consumer.receive_all(expected, 100).await;
+    println!("Consumer received {} documents", output.len());
+
+    output.iter().enumerate().for_each(|(i, doc)| {
+        println!("Document {}: {:?}", i, doc);
+        let full = doc.get("fullDocument").unwrap();
+        println!("Document {}: {:?}", i, full);
+    });
+
+    let mut full_docs = Vec::new();
+    output.iter().enumerate().for_each(|(i, doc)| {
+        println!("Document {}: {:?}", i, doc);
+        if let Some(mut full) = doc.get("fullDocument").cloned() {
+            // Remove the "_id" field if present
+            if let Some(obj) = full.as_object_mut() {
+                obj.remove("_id");
+            }
+            println!("Document {} (fullDocument, no _id): {:?}", i, full);
+            full_docs.push(full);
+        }
+    });
+    assert_eq!(docs, full_docs);
 
     // let consumer_task = tokio::spawn(async move {
     //     let received = consumer.receive_all(expected, 1000).await;
