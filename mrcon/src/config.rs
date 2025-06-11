@@ -27,13 +27,13 @@ pub struct Collection {
     pub rabbitmq: RabbitMq,
 }
 
-#[derive(Debug, Default, Deserialize, Clone)]
+#[derive(Default, Deserialize, Clone)]
 pub struct Connections {
     pub mongo_uri: String,
     pub rabbitmq_uri: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Deserialize, Clone)]
 pub struct Settings {
     #[serde(skip)]
     connections: Connections,
