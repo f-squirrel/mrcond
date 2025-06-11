@@ -77,22 +77,69 @@ impl Producer {
         }
     }
 
-    pub async fn send_bulk(&self, docs: &[serde_json::Value]) -> mongodb::error::Result<()> {
+    pub async fn send_bulk(
+        &self,
+        docs: &[serde_json::Value],
+    ) -> mongodb::error::Result<Vec<serde_json::Value>> {
         if !docs.is_empty() {
             let docs: Vec<_> = docs
                 .iter()
-                .map(|v| mongodb::bson::to_document(v).unwrap())
+                .map(|v| {
+                    let mut doc = mongodb::bson::to_document(v).unwrap();
+                    let oid = mongodb::bson::oid::ObjectId::new();
+                    doc.insert("_id", oid);
+                    doc
+                })
                 .collect();
-            self.collection.insert_many(docs).await?;
+            self.collection.insert_many(docs.clone()).await?;
+            // Convert a Vec<bson::Document> to Vec<serde_json::Value>
+            let json_values: Vec<serde_json::Value> = docs
+                .into_iter()
+                .map(|doc| serde_json::to_value(doc).unwrap())
+                .collect();
+
             println!("Inserted documents into MongoDB");
+            return Ok(json_values);
         } else {
             println!("No documents to insert");
         }
-        Ok(())
+        Ok(vec![])
+    }
+
+    pub async fn send_seq(
+        &self,
+        docs: &[serde_json::Value],
+    ) -> mongodb::error::Result<Vec<serde_json::Value>> {
+        if !docs.is_empty() {
+            let docs: Vec<_> = docs
+                .iter()
+                .map(|v| {
+                    let mut doc = mongodb::bson::to_document(v).unwrap();
+                    let oid = mongodb::bson::oid::ObjectId::new();
+                    doc.insert("_id", oid);
+                    doc
+                })
+                .collect();
+            for d in docs.iter() {
+                self.collection.insert_one(d).await?;
+            }
+            // Convert a Vec<bson::Document> to Vec<serde_json::Value>
+            let json_values: Vec<serde_json::Value> = docs
+                .into_iter()
+                .map(|doc| serde_json::to_value(doc).unwrap())
+                .collect();
+
+            println!("Inserted documents into MongoDB");
+            return Ok(json_values);
+        } else {
+            println!("No documents to insert");
+        }
+        Ok(vec![])
     }
 }
 
 /// Consumer for receiving messages from RabbitMQ.
+#[derive(Clone)]
 pub struct Consumer {
     channel: lapin::Channel,
     queue: String,
@@ -119,8 +166,6 @@ impl Consumer {
             }
         };
 
-        // let conn =
-        //     lapin::Connection::connect(rabbitmq_uri, ConnectionProperties::default()).await?;
         let channel = conn.create_channel().await?;
         channel
             .queue_declare(queue, QueueDeclareOptions::default(), FieldTable::default())
@@ -156,25 +201,16 @@ impl Consumer {
     }
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn test_producer_consumer_init_and_join() {
-    let base = std::env::current_dir().unwrap();
-    println!("Current directory: {:?}", base);
-
-    let mut cluster = Cluster::start();
-    tokio::time::sleep(Duration::from_secs(10)).await;
-
+fn load_settings(config: &str, connections: &str) -> Settings {
     let config = config::Config::builder()
-        .add_source(config::File::with_name("tests/data/simple/config.yaml"))
+        .add_source(config::File::with_name(config))
         .build()
         .unwrap();
 
     let settings = config.try_deserialize::<Settings>().unwrap();
 
     let config = config::Config::builder()
-        .add_source(config::File::with_name(
-            "tests/data/simple/connections.yaml",
-        ))
+        .add_source(config::File::with_name(connections))
         .build()
         .unwrap();
     let connections = config.try_deserialize::<Connections>().unwrap();
@@ -182,9 +218,15 @@ async fn test_producer_consumer_init_and_join() {
     let settings = Settings::new(connections, settings.collections().to_owned())
         .map_err(|e| anyhow::anyhow!("Failed to create settings: {}", e))
         .unwrap();
+    settings
+}
 
-    println!("Settings: {:?}", settings);
+fn load_input_data(file: &str) -> Vec<serde_json::Value> {
+    let file = std::fs::File::open(file).unwrap();
+    serde_json::from_reader(file).unwrap()
+}
 
+async fn create_pubsub(settings: &Settings) -> (Producer, Consumer) {
     let mut counter = 0;
     let client = loop {
         match Client::with_uri_str(settings.connections().mongo_uri.clone()).await {
@@ -205,9 +247,6 @@ async fn test_producer_consumer_init_and_join() {
             }
         }
     };
-    // let client = Client::with_uri_str(settings.connections.mongo_uri)
-    //     .await
-    //     .unwrap();
 
     let producer = Producer::new(client, &settings.collections()[0]).await;
     let consumer = Consumer::new(
@@ -216,60 +255,83 @@ async fn test_producer_consumer_init_and_join() {
     )
     .await
     .unwrap();
+    (producer, consumer)
+}
 
-    // Read input documents from file
-    let docs: Vec<serde_json::Value> = {
-        let cwd = std::env::current_dir().unwrap();
-        println!("Current directory: {:?}", cwd);
-        let file = std::fs::File::open("tests/data/simple/input.json").unwrap();
-        serde_json::from_reader(file).unwrap()
-    };
-    let expected = docs.len();
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test() {
+    let mut cluster = Cluster::start();
+    tokio::time::sleep(Duration::from_secs(10)).await;
 
-    println!("Sending {} documents to MongoDB", docs.len());
-    let res = producer.send_bulk(&docs).await;
-    println!("Producer finished sending documents: {:?}", res);
-    // Spawn producer and consumer tasks
-    // let producer_task = tokio::spawn({
-    //     let producer = producer.clone();
-    //     let docs = docs.clone();
-    //     async move {
-    //         println!("Sending {} documents to MongoDB", docs.len());
-    //         let res = producer.send_bulk(&docs).await;
-    //         println!("Producer finished sending documents: {:?}", res);
-    //     }
-    // });
+    let settings = load_settings(
+        "tests/data/simple/config.yaml",
+        "tests/data/simple/connections.yaml",
+    );
 
-    // tokio::time::sleep(Duration::from_secs(100)).await; // Wait for producer to send documents
-    let output = consumer.receive_all(expected).await;
-    println!("Consumer received {} documents", output.len());
+    let input = load_input_data("tests/data/simple/input.json");
 
-    output.iter().enumerate().for_each(|(i, doc)| {
-        println!("Document {}: {:?}", i, doc);
-        let full = doc.get("fullDocument").unwrap();
-        println!("Document {}: {:?}", i, full);
+    let (producer, consumer) = create_pubsub(&settings).await;
+
+    producer_consumer_send_in_bulk(producer.clone(), consumer.clone(), input.clone()).await;
+    producer_consumer_send_one_by_one(producer, consumer, input).await;
+
+    cluster.stop();
+}
+
+async fn producer_consumer_send_in_bulk(
+    producer: Producer,
+    consumer: Consumer,
+    input: Vec<serde_json::Value>,
+) {
+    let producer_task = tokio::spawn({
+        let docs = input.clone();
+        async move {
+            println!("Sending {} documents to MongoDB", docs.len());
+            let res = producer.send_seq(&docs).await;
+            println!("Producer finished sending documents: {:?}", res);
+            res
+        }
     });
 
+    let consumer_task = tokio::spawn(async move { consumer.receive_all(input.len()).await });
+
+    let (sent, received) = tokio::try_join!(producer_task, consumer_task).unwrap();
+
     let mut full_docs = Vec::new();
-    output.iter().enumerate().for_each(|(i, doc)| {
-        println!("Document {}: {:?}", i, doc);
-        if let Some(mut full) = doc.get("fullDocument").cloned() {
-            // Remove the "_id" field if present
-            if let Some(obj) = full.as_object_mut() {
-                obj.remove("_id");
-            }
+    received.iter().enumerate().for_each(|(i, doc)| {
+        if let Some(full) = doc.get("fullDocument").cloned() {
             println!("Document {} (fullDocument, no _id): {:?}", i, full);
             full_docs.push(full);
         }
     });
-    assert_eq!(docs, full_docs);
+    assert_eq!(sent.unwrap(), full_docs);
+}
 
-    // let consumer_task = tokio::spawn(async move {
-    //     let received = consumer.receive_all(expected, 1000).await;
-    //     assert_eq!(received, docs);
-    // });
+async fn producer_consumer_send_one_by_one(
+    producer: Producer,
+    consumer: Consumer,
+    input: Vec<serde_json::Value>,
+) {
+    let producer_task = tokio::spawn({
+        let docs = input.clone();
+        async move {
+            println!("Sending {} documents to MongoDB", docs.len());
+            let res = producer.send_seq(&docs).await;
+            println!("Producer finished sending documents: {:?}", res);
+            res
+        }
+    });
 
-    // // Join both tasks
-    // let _ = tokio::try_join!(producer_task, consumer_task).unwrap();
-    cluster.stop();
+    let consumer_task = tokio::spawn(async move { consumer.receive_all(input.len()).await });
+
+    let (sent, received) = tokio::try_join!(producer_task, consumer_task).unwrap();
+
+    let mut full_docs = Vec::new();
+    received.iter().enumerate().for_each(|(i, doc)| {
+        if let Some(full) = doc.get("fullDocument").cloned() {
+            println!("Document {} (fullDocument, no _id): {:?}", i, full);
+            full_docs.push(full);
+        }
+    });
+    assert_eq!(sent.unwrap(), full_docs);
 }
