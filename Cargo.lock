@@ -1873,6 +1873,7 @@ dependencies = [
  "bson",
  "clap",
  "config",
+ "futures-util",
  "lapin",
  "mongodb",
  "mongodb_rabbitmq_connector",

@@ -1,3 +1,4 @@
+use futures_util::stream::StreamExt;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
@@ -130,21 +131,25 @@ impl Consumer {
         })
     }
 
-    pub async fn receive_all(&self, expected: usize, max_tries: usize) -> Vec<serde_json::Value> {
+    pub async fn receive_all(&self, expected: usize) -> Vec<serde_json::Value> {
         let mut received = vec![];
-        let mut tries = 0;
-        while received.len() < expected && tries < max_tries {
-            let msg = self
-                .channel
-                .basic_get(&self.queue, BasicGetOptions::default())
-                .await
-                .unwrap();
-            if let Some(data) = msg {
-                let v: serde_json::Value = serde_json::from_slice(&data.data).unwrap();
-                received.push(v);
-            } else {
-                tokio::time::sleep(Duration::from_millis(200)).await;
-                tries += 1;
+        let mut consumer = self
+            .channel
+            .basic_consume(
+                &self.queue,
+                "my tag",
+                BasicConsumeOptions::default(),
+                FieldTable::default(),
+            )
+            .await
+            .unwrap();
+
+        while let Some(data) = consumer.next().await {
+            let data = data.unwrap();
+            let v: serde_json::Value = serde_json::from_slice(&data.data).unwrap();
+            received.push(v);
+            if received.len() >= expected {
+                break;
             }
         }
         received
@@ -235,8 +240,8 @@ async fn test_producer_consumer_init_and_join() {
     //     }
     // });
 
-    tokio::time::sleep(Duration::from_secs(100)).await; // Wait for producer to send documents
-    let output = consumer.receive_all(expected, 100).await;
+    // tokio::time::sleep(Duration::from_secs(100)).await; // Wait for producer to send documents
+    let output = consumer.receive_all(expected).await;
     println!("Consumer received {} documents", output.len());
 
     output.iter().enumerate().for_each(|(i, doc)| {

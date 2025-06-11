@@ -20,3 +20,4 @@ mongodb.workspace = true
 lapin.workspace = true
 serde_json.workspace = true
 serde.workspace = true
+futures-util.workspace = true
