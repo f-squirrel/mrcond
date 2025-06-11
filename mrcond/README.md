@@ -28,7 +28,7 @@ make run
 ## Command-Line Options
 
 - `--config <FILE>`: Path to the YAML configuration file (default: `config.yaml`).
-- `--prefix <PREFIX>`: Environment variable prefix for config overrides (default: `MRQCONN`).
+- `--prefix <PREFIX>`: Environment variable prefix for config overrides (default: `MRCON`).
 
 ## Configuration
 

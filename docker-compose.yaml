@@ -39,8 +39,8 @@ services:
       - mongodb
       - rabbitmq
     environment:
-      MRQCONN_MONGO_URI: "mongodb://root:example@mongodb:27017/"
-      MRQCONN_RABBITMQ_URI: "amqp://guest:guest@rabbitmq:5672/my_vhost"
+      MRCON_MONGO_URI: "mongodb://root:example@mongodb:27017/"
+      MRCON_RABBITMQ_URI: "amqp://guest:guest@rabbitmq:5672/my_vhost"
       RUST_LOG: "mrcon=trace,mrcon=trace,lapin=debug"
 
     volumes:

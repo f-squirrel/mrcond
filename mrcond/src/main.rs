@@ -13,7 +13,7 @@ struct Cli {
     #[arg(short, long, default_value = "/app/config.yaml")]
     config: String,
     /// Prefix for environment variables
-    #[arg(short, long, default_value = "MRQCONN")]
+    #[arg(short, long, default_value = "MRCON")]
     prefix: String,
 }
 
