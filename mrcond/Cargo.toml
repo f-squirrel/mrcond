@@ -1,10 +1,10 @@
 [package]
-name = "mongodb_rabbitmq_connectord"
+name = "mrcond"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-mongodb_rabbitmq_connector = { path = "../mongodb_rabbitmq_connector" }
+mrcon = { path = "../mrcon" }
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

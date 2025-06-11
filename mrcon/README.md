@@ -1,4 +1,4 @@
-# mongodb_rabbitmq_connector
+# mrcon
 
 A robust, modular Rust library for streaming MongoDB change events to RabbitMQ, with persistent resume tokens, structured logging, and production-grade error handling.
 
@@ -13,7 +13,7 @@ A robust, modular Rust library for streaming MongoDB change events to RabbitMQ, 
 
 ## Usage
 
-This crate is intended to be used as a library by the `mongodb_rabbitmq_connectord` binary, but can be integrated into other Rust applications as well.
+This crate is intended to be used as a library by the `mrcond` binary, but can be integrated into other Rust applications as well.
 
 ### Example
 

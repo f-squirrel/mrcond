@@ -1,5 +1,5 @@
 [package]
-name = "mongodb_rabbitmq_connector"
+name = "mrcon"
 version = "0.1.0"
 edition = "2021"
 

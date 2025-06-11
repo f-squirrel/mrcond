@@ -2,8 +2,8 @@
 use anyhow::Result;
 use axum::{routing::get, Router};
 use clap::Parser;
-use mongodb_rabbitmq_connector::config::{Connections, Settings};
-use mongodb_rabbitmq_connector::ConnectorServer;
+use mrcon::config::{Connections, Settings};
+use mrcon::ConnectorServer;
 
 /// MongoDB-RabbitMQ Connector Daemon
 #[derive(Parser, Debug)]

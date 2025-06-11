@@ -1,6 +1,6 @@
-# mongodb_rabbitmq_connectord
+# mrcond
 
-A production-ready CLI daemon for streaming MongoDB change events to RabbitMQ, built on the `mongodb_rabbitmq_connector` library.
+A production-ready CLI daemon for streaming MongoDB change events to RabbitMQ, built on the `mrcon` library.
 
 ## Features
 
@@ -16,7 +16,7 @@ Build and run the daemon with your configuration:
 
 ```sh
 cargo build --release
-./target/release/mongodb_rabbitmq_connectord --config config.yaml --prefix MYAPP_
+./target/release/mrcond --config config.yaml --prefix MYAPP_
 ```
 
 Or use Docker Compose for local integration testing:

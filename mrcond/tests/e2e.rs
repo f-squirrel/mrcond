@@ -6,7 +6,7 @@ use bson::Document;
 use lapin::{options::*, types::FieldTable, ConnectionProperties};
 use mongodb::Client;
 use mongodb::Database;
-use mongodb_rabbitmq_connector::config::{Collection, Connections, Settings};
+use mrcon::config::{Collection, Connections, Settings};
 
 struct Cluster {
     cluster: Child,

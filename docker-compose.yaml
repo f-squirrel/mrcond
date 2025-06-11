@@ -33,7 +33,7 @@ services:
   connector:
     build:
       context: .
-      dockerfile: ./mongodb_rabbitmq_connectord/Dockerfile
+      dockerfile: ./mrcond/Dockerfile
     container_name: connector
     depends_on:
       - mongodb
@@ -41,15 +41,15 @@ services:
     environment:
       MRQCONN_MONGO_URI: "mongodb://root:example@mongodb:27017/"
       MRQCONN_RABBITMQ_URI: "amqp://guest:guest@rabbitmq:5672/my_vhost"
-      RUST_LOG: "mongodb_rabbitmq_connector=trace,mongodb_rabbitmq_connectord=trace,lapin=debug"
+      RUST_LOG: "mrcon=trace,mrcon=trace,lapin=debug"
 
     volumes:
       - ./config.yaml:/app/config.yaml:ro
-      - ./target/debug/mongodb_rabbitmq_connectord:/app/mongodb_rabbitmq_connectord:ro
-    # Uncomment for debugging
-    # ports:
-    #   - "8080:8080" # health check
-    #   - "3000:3000" # your app port if needed
+      - ./target/debug/mrcond:/app/mrcond:ro
+# Uncomment for debugging
+# ports:
+#   - "8080:8080" # health check
+#   - "3000:3000" # your app port if needed
 
 volumes:
   mongo_data:
