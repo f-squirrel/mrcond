@@ -4,6 +4,8 @@ use axum::{routing::get, Router};
 use clap::Parser;
 use mrcon::config::{Connections, Settings};
 use mrcon::ConnectorServer;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 /// MongoDB-RabbitMQ Connector Daemon
 #[derive(Parser, Debug)]
@@ -19,8 +21,12 @@ struct Cli {
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
     let cli = Cli::parse();
+
+    tracing_subscriber::registry()
+        .with(fmt::layer())
+        .with(EnvFilter::from_env(format!("{}_LOG", cli.prefix)))
+        .init();
 
     let config = config::Config::builder()
         .add_source(config::Environment::default().prefix(&cli.prefix))
