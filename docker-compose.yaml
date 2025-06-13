@@ -46,10 +46,9 @@ services:
     volumes:
       - ./config.yaml:/app/config.yaml:ro
       - ./target/debug/mrcond:/app/mrcond:ro
-# Uncomment for debugging
-# ports:
-#   - "8080:8080" # health check
-#   - "3000:3000" # your app port if needed
+    ports:
+      # - "8080:8080" # health check
+      - "3000:3000" # your app port if needed
 
 volumes:
   mongo_data:

@@ -275,6 +275,14 @@ async fn test() {
     producer_consumer_send_in_bulk(producer.clone(), consumer.clone(), input.clone()).await;
     producer_consumer_send_one_by_one(producer, consumer, input).await;
 
+    let health_response = reqwest::get("http://localhost:3000/health")
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+
+    assert_eq!(health_response, "OK");
     cluster.stop();
 }
 
@@ -304,6 +312,7 @@ async fn producer_consumer_send_in_bulk(
             full_docs.push(full);
         }
     });
+
     assert_eq!(sent.unwrap(), full_docs);
 }
 
