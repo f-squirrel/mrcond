@@ -16,7 +16,7 @@ struct Cluster {
 impl Cluster {
     fn start() -> Self {
         let cluster = Command::new("make")
-            .args(&["-C", "../", "down", "run"])
+            .args(["-C", "../", "down", "run"])
             .stdout(Stdio::null())
             .spawn()
             .expect("Failed to start cluster");
@@ -35,7 +35,7 @@ impl Cluster {
         let _ = self.cluster.wait();
 
         let _ = Command::new("make")
-            .args(&["-C", "../", "down"])
+            .args(["-C", "../", "down"])
             .stdout(Stdio::null())
             .spawn()
             .expect("Failed to start cluster")
