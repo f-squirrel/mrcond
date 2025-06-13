@@ -33,18 +33,16 @@ pub struct Connector {
 impl Connector {
     /// Constructs a new `Connector` for a watched MongoDB collection and RabbitMQ publisher.
     ///
-    /// This method initializes the MongoDB client, persistent resume token storage, and RabbitMQ publisher
-    /// for the specified collection configuration. It is the main entry point for setting up a connector
+    /// Initializes the MongoDB client, persistent resume token storage, and RabbitMQ publisher
+    /// for the specified collection configuration. Main entry point for setting up a connector
     /// for a single collection, using the provided MongoDB and RabbitMQ URIs and collection settings.
     ///
     /// # Arguments
-    ///
     /// * `mongo_uri` - MongoDB connection string.
     /// * `rabbitmq_uri` - RabbitMQ connection string.
-    /// * `settings` - Collection-specific configuration, including watched collection, resume token storage, and RabbitMQ settings.
+    /// * `settings` - Collection-specific configuration.
     ///
     /// # Errors
-    ///
     /// Returns an error if the MongoDB client, resume token storage, or RabbitMQ publisher cannot be initialized.
     pub async fn from_collection(
         mongo_uri: &str,
@@ -62,6 +60,17 @@ impl Connector {
         Self::new(client, settings.watched.clone(), resume_tokens, publisher).await
     }
 
+    /// Constructs a new `Connector` using existing MongoDB and RabbitMQ clients.
+    ///
+    /// Preferred when you want to share a MongoDB or RabbitMQ connection between multiple connectors.
+    ///
+    /// # Arguments
+    /// * `client` - An existing MongoDB client.
+    /// * `rabbitmq_client` - An existing RabbitMQ connection (shared via Arc).
+    /// * `settings` - Collection-specific configuration.
+    ///
+    /// # Errors
+    /// Returns an error if resume token storage or publisher cannot be initialized.
     pub async fn with_clients(
         client: Client,
         rabbitmq_client: Arc<lapin::Connection>,
@@ -79,18 +88,16 @@ impl Connector {
 
     /// Creates a new `Connector` instance from its components.
     ///
-    /// This is a lower-level constructor for advanced use cases, allowing direct injection of the MongoDB client,
+    /// Lower-level constructor for advanced use cases, allowing direct injection of the MongoDB client,
     /// watched collection info, resume token storage, and RabbitMQ publisher.
     ///
     /// # Arguments
-    ///
     /// * `client` - Initialized MongoDB client.
     /// * `watched` - Watched collection configuration.
     /// * `resume_tokens` - Persistent resume token storage.
     /// * `publisher` - RabbitMQ publisher abstraction.
     ///
     /// # Errors
-    ///
     /// Returns an error if construction fails (should be infallible in most cases).
     pub async fn new(
         client: Client,
@@ -108,16 +115,14 @@ impl Connector {
 
     /// Streams MongoDB change events to RabbitMQ and persists resume tokens.
     ///
-    /// This method opens a change stream on the configured MongoDB collection, optionally resuming from the last
-    /// persisted resume token for the given `stream_name`. For each change event, it publishes the event to RabbitMQ
+    /// Opens a change stream on the configured MongoDB collection, optionally resuming from the last
+    /// persisted resume token for the given `stream_name`. For each change event, publishes the event to RabbitMQ
     /// and updates the resume token in persistent storage. If the collection is dropped, the resume tokens are cleaned up.
     ///
     /// # Arguments
-    ///
     /// * `stream_name` - A unique identifier for the change stream, used for resume token persistence.
     ///
     /// # Errors
-    ///
     /// Returns an error if there is a failure in reading from MongoDB, publishing to RabbitMQ, or persisting resume tokens.
     pub async fn connect(&self, stream_name: &str) -> Result<(), Error> {
         let collection = self
