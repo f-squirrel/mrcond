@@ -2,6 +2,15 @@
 resolver = "2"
 members = ["mrcon", "mrcond"]
 
+[workspace.package]
+version = "0.1.0"
+license = "MIT"
+authors = ["Dmitry Danilov"]
+edition = "2021"
+keywords = ["mongodb", "rabbitmq", "connector", "cdc", "rust"]
+categories = ["mongodb", "rabbitmq", "connector", "cdc", "rust"]
+repository = "https://github.com/f-squirrel/mrcond"
+
 [workspace.dependencies]
 mongodb = { version = "3" }
 lapin = { version = "2.5" }

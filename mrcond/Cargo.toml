@@ -1,7 +1,12 @@
 [package]
 name = "mrcond"
-version = "0.1.0"
-edition = "2021"
+
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 mrcon = { path = "../mrcon" }
