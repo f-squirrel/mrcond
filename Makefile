@@ -30,6 +30,9 @@ clippy:
 format:
 	cargo fmt --all
 
+check-format:
+	cargo fmt --all --check
+
 test:
 	cargo test --workspace
 
