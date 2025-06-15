@@ -24,8 +24,11 @@ run:
 check:
 	cargo check --workspace
 
+check-clippy:
+	cargo clippy --workspace -- -D warnings
+
 clippy:
-	cargo clippy --workspace
+	cargo clippy --workspace --fix
 
 format:
 	cargo fmt --all
