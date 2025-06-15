@@ -34,7 +34,7 @@ check-format:
 	cargo fmt --all --check
 
 test:
-	cargo test --workspace
+	cargo test --workspace -- --nocapture
 
 help:
 	@echo "Available targets:"
