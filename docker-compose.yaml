@@ -39,7 +39,9 @@ services:
       - mongodb
       - rabbitmq
     environment:
-      MRCON_MONGO_URI: "mongodb://root:example@mongodb:27017/"
+      # MRCON_MONGO_URI: "mongodb://root:example@mongodb:27017/"
+      # MRCON_MONGO_URI: "mongodb://root:example@mongodb:27017/?authSource=admin"
+      MRCON_MONGO_URI: "mongodb://mongodb:27017/"
       MRCON_RABBITMQ_URI: "amqp://guest:guest@rabbitmq:5672/my_vhost"
       MRCON_LOG: "mrcon=trace,mrcon=trace,lapin=debug"
 

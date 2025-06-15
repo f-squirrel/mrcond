@@ -1,2 +1,4 @@
-mongo_uri: "mongodb://root:example@localhost:27017/?directConnection=true"
+mongo_uri: "mongodb://localhost:27017/?directConnection=true"
+# mongo_uri: "mongodb://root:example@localhost:27017/?directConnection=true"
+# mongo_uri: "mongodb://root:example@mongodb:27017/?authSource=admin"
 rabbitmq_uri: "amqp://guest:guest@localhost:5672/my_vhost"
