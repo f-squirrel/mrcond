@@ -12,5 +12,6 @@ jobs:
       # Ensure rustfmt is installed and setup problem matcher
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: |
+            docker compose logs
             make check check-format clippy build test
         timeout-minutes: 5
