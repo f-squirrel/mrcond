@@ -11,5 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       # Ensure rustfmt is installed and setup problem matcher
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: make check check-format clippy build test
+      - run: |
+            docker compose logs
+            make check check-format clippy build test
         timeout-minutes: 5
