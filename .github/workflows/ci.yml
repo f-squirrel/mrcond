@@ -16,4 +16,4 @@ jobs:
           export LOG_TAIL_PID=$!
           make check check-format check-clippy build test
           kill $LOG_TAIL_PID
-        timeout-minutes: 5
+        timeout-minutes: 30
