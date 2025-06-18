@@ -1,4 +1,4 @@
-# MongoDB-RabbitMQ Connector Monorepo
+# MongoDB-RabbitMQ Connector
 
 This repository contains a production-ready system for streaming MongoDB change events to RabbitMQ, featuring a robust library and a CLI daemon for deployment.
 
