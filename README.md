@@ -1,3 +1,5 @@
+[![Test Suite](https://github.com/f-squirrel/mrcond/actions/workflows/ci.yml/badge.svg)](https://github.com/f-squirrel/mrcond/actions/workflows/ci.yml)
+
 # MongoDB-RabbitMQ Connector
 
 This repository contains a production-ready system for streaming MongoDB change events to RabbitMQ, featuring a robust library and a CLI daemon for deployment.
