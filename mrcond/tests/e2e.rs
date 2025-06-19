@@ -1,5 +1,7 @@
 use futures_util::stream::StreamExt;
+use std::io::{BufRead, BufReader};
 use std::process::{Child, Command, Stdio};
+use std::thread;
 use std::time::Duration;
 
 use bson::Document;
@@ -15,11 +17,45 @@ struct Cluster {
 
 impl Cluster {
     fn start() -> Self {
-        let cluster = Command::new("make")
-            .args(["-C", "../", "down", "run"])
-            .stdout(Stdio::null())
+        println!("Starting docker-compose cluster...");
+
+        // First, make sure we're starting clean
+        let _ = Command::new("make")
+            .args(["-C", "../", "down"])
+            .output()
+            .expect("Failed to run make down");
+
+        let mut cluster = Command::new("make")
+            .args(["-C", "../", "run"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
             .spawn()
             .expect("Failed to start cluster");
+
+        // Capture and print stdout in a separate thread
+        if let Some(stdout) = cluster.stdout.take() {
+            let reader = BufReader::new(stdout);
+            thread::spawn(move || {
+                for line in reader.lines() {
+                    if let Ok(line) = line {
+                        println!("[DOCKER-COMPOSE STDOUT] {}", line);
+                    }
+                }
+            });
+        }
+
+        // Capture and print stderr in a separate thread
+        if let Some(stderr) = cluster.stderr.take() {
+            let reader = BufReader::new(stderr);
+            thread::spawn(move || {
+                for line in reader.lines() {
+                    if let Ok(line) = line {
+                        println!("[DOCKER-COMPOSE STDERR] {}", line);
+                    }
+                }
+            });
+        }
+
         Self {
             cluster,
             running: true,
@@ -31,16 +67,27 @@ impl Cluster {
             return;
         }
 
+        println!("Stopping docker-compose cluster...");
         let _ = self.cluster.kill();
         let _ = self.cluster.wait();
 
-        let _ = Command::new("make")
+        let output = Command::new("make")
             .args(["-C", "../", "down"])
-            .stdout(Stdio::null())
-            .spawn()
-            .expect("Failed to start cluster")
-            .wait()
-            .unwrap();
+            .output()
+            .expect("Failed to run make down");
+
+        if !output.stdout.is_empty() {
+            println!(
+                "[DOCKER-COMPOSE DOWN] {}",
+                String::from_utf8_lossy(&output.stdout)
+            );
+        }
+        if !output.stderr.is_empty() {
+            println!(
+                "[DOCKER-COMPOSE DOWN ERROR] {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
 
         self.running = false;
     }

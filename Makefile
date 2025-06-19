@@ -1,6 +1,6 @@
 # Makefile for mongodb-rabbitmq-connector workspace
 
-.PHONY: all build build-release build-debug clean run check format help venv test-integration
+.PHONY: all build build-release build-debug clean run check format help venv test test-integration test-integration-verbose
 
 all: build-debug
 
@@ -38,6 +38,29 @@ check-format:
 
 test:
 	cargo test --workspace -- --nocapture
+
+test-integration:
+	@echo "Running integration tests with docker-compose output..."
+	cargo test --workspace --test e2e -- --nocapture
+
+test-integration-quiet:
+	@echo "Running integration tests (quiet mode)..."
+	RUST_LOG=warn cargo test --workspace --test e2e -- --nocapture 2>/dev/null
+
+run-logs:
+	docker compose up --build
+
+logs:
+	docker compose logs -f
+
+logs-connector:
+	docker compose logs -f connector
+
+logs-mongo:
+	docker compose logs -f mongodb
+
+logs-rabbitmq:
+	docker compose logs -f rabbitmq
 
 help:
 	@echo "Available targets:"
