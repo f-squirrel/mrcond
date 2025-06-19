@@ -2,7 +2,7 @@
 
 use std::{sync::Arc, time::Duration};
 
-use crate::{config::Settings, rabbitmq};
+use crate::{config::Settings, metrics::Metrics, rabbitmq};
 use mongodb::Client;
 use thiserror::Error;
 use tracing::{error, info, warn};
@@ -24,8 +24,10 @@ pub enum Error {
 ///
 /// Fields:
 /// - `settings`: Application settings, including all collection and connection configuration.
+/// - `metrics`: Prometheus metrics collector for tracking server status.
 pub struct Server {
     settings: Settings,
+    metrics: Metrics,
 }
 
 const RETRY_DELAY: Duration = Duration::from_secs(5);
@@ -33,7 +35,20 @@ const RETRY_DELAY: Duration = Duration::from_secs(5);
 impl Server {
     /// Create a new `Server` with the given settings.
     pub fn new(settings: Settings) -> Self {
-        Self { settings }
+        Self {
+            settings,
+            metrics: Metrics::new(),
+        }
+    }
+
+    /// Create a new `Server` with the given settings and metrics collector.
+    pub fn with_metrics(settings: Settings, metrics: Metrics) -> Self {
+        Self { settings, metrics }
+    }
+
+    /// Get a reference to the metrics collector.
+    pub fn metrics(&self) -> &Metrics {
+        &self.metrics
     }
 
     async fn connect_to_mongo(settings: &Settings) -> Result<Client, Error> {
@@ -135,10 +150,21 @@ impl Server {
                 mongo_client.clone(),
                 rabbitmq_client.clone(),
             ));
+            self.metrics.increment_collection_server(
+                &collection.watched.coll_name,
+                &collection.watched.db_name,
+            );
+            self.metrics.record_task_start();
         }
+
+        // Update total server count
+        self.metrics.set_server_count(join_set.len());
 
         info!("Connector server started");
         while let Some(res) = join_set.join_next().await {
+            // Update metrics after a task completes
+            self.metrics.set_server_count(join_set.len());
+
             match res {
                 Ok(Ok(_)) => {
                     warn!("Connector task finished due to collection drop, not restarting");
@@ -146,28 +172,53 @@ impl Server {
                 Ok(Err(e)) => match e {
                     Error::Connector { source, collection } => {
                         error!(error = ?source, collection = %collection.watched.coll_name, "Connector task failed, restarting");
-                        match source {
+
+                        // Record the failure and restart reason
+                        let (error_type, restart_reason) = match &source {
                             crate::mongo::connector::Error::Mongo(_) => {
                                 info!("Restarting mongo client");
                                 mongo_client = Self::connect_to_mongo(&self.settings).await?;
+                                ("mongo_error", "mongo_connection_failed")
                             }
                             crate::mongo::connector::Error::RabbitMq(rabbitmq::Error::Lapin(_)) => {
                                 info!("Restarting RabbitMQ client");
                                 rabbitmq_client = Self::connect_to_rabbitmq(&self.settings).await?;
+                                ("rabbitmq_error", "rabbitmq_connection_failed")
                             }
                             other => {
                                 error!(error = ?other, "Unhandled connector error, reusing existing clients");
+                                ("unknown_error", "unhandled_error")
                             }
-                        }
+                        };
+
+                        self.metrics.record_task_failure(
+                            &collection.watched.coll_name,
+                            &collection.watched.db_name,
+                            error_type,
+                        );
+                        self.metrics.record_task_restart(
+                            &collection.watched.coll_name,
+                            &collection.watched.db_name,
+                            restart_reason,
+                        );
+
                         join_set.spawn(Server::spawn_task(
-                            collection,
+                            collection.clone(),
                             mongo_client.clone(),
                             rabbitmq_client.clone(),
                         ));
+                        self.metrics.record_task_start();
+                        // Update metrics when restarting a task
+                        self.metrics.set_server_count(join_set.len());
                     }
                 },
                 Err(e) => {
                     error!(error = ?e, "Connector task panicked, not restarting");
+                    // Record the panic as a failure (we can't determine which collection, so use "unknown")
+                    self.metrics
+                        .record_task_failure("unknown", "unknown", "task_panic");
+                    // Update metrics when a task panics and is not restarted
+                    self.metrics.set_server_count(join_set.len());
                 }
             }
         }

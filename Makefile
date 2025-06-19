@@ -1,6 +1,6 @@
 # Makefile for mongodb-rabbitmq-connector workspace
 
-.PHONY: all build build-release build-debug clean run check format help venv test test-integration test-integration-verbose
+.PHONY: all build build-release build-debug clean run check format help venv test test-integration test-integration-quiet test-metrics
 
 all: build-debug
 
@@ -61,6 +61,11 @@ logs-mongo:
 
 logs-rabbitmq:
 	docker compose logs -f rabbitmq
+
+test-metrics:
+	@echo "Running metrics endpoint tests..."
+	@chmod +x test-metrics.sh
+	./test-metrics.sh
 
 help:
 	@echo "Available targets:"

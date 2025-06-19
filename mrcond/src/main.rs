@@ -3,7 +3,9 @@ use anyhow::Result;
 use axum::{routing::get, Router};
 use clap::Parser;
 use mrcon::config::{Connections, Settings};
+use mrcon::metrics::Metrics;
 use mrcon::ConnectorServer;
+
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
@@ -42,17 +44,35 @@ async fn main() -> Result<()> {
     let settings = Settings::new(connections, settings.collections().to_owned())
         .map_err(|e| anyhow::anyhow!("Failed to create settings: {}", e))?;
 
+    // Create shared metrics instance
+    let metrics = Metrics::new();
+    let metrics_for_server = metrics.clone();
+    let metrics_for_api = metrics.clone();
+
     let health_api = tokio::spawn(async move {
         async fn health() -> &'static str {
             "OK"
         }
-        let app = Router::new().route("/health", get(health));
+
+        let metrics_clone = metrics_for_api.clone();
+        let metrics_handler = {
+            let metrics = metrics_clone;
+            move || async move {
+                metrics
+                    .export()
+                    .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        };
+
+        let app = Router::new()
+            .route("/health", get(health))
+            .route("/metrics", get(metrics_handler));
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
         axum::serve(listener, app).await
     });
 
     let server = tokio::spawn(async move {
-        let server = ConnectorServer::new(settings);
+        let server = ConnectorServer::with_metrics(settings, metrics_for_server);
         server.serve().await
     });
 

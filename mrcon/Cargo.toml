@@ -19,3 +19,4 @@ tracing.workspace = true
 bson.workspace = true
 thiserror.workspace = true
 async-trait.workspace = true
+prometheus.workspace = true

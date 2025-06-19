@@ -9,9 +9,15 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: example
     volumes:
       - mongo_data:/data/db
-    command: [ "sh", "-c", "mongod --replSet rs0 --bind_ip_all --port 27017" ]
+    command: ["sh", "-c", "mongod --replSet rs0 --bind_ip_all --port 27017"]
     healthcheck:
-      test: [ "CMD", "sh", "-c", "echo 'try { rs.status() } catch (e) { rs.initiate({_id: \"rs0\", members: [{_id: 0, host: \"mongodb:27017\"}]}) }' | mongosh --quiet --port 27017" ]
+      test:
+        [
+          "CMD",
+          "sh",
+          "-c",
+          'echo ''try { rs.status() } catch (e) { rs.initiate({_id: "rs0", members: [{_id: 0, host: "mongodb:27017"}]}) }'' | mongosh --quiet --port 27017',
+        ]
       interval: 1s
       timeout: 10s
       start_period: 0s
@@ -50,7 +56,7 @@ services:
       - ./target/debug/mrcond:/app/mrcond:ro
     ports:
       # - "8080:8080" # health check
-      - "3000:3000" # your app port if needed
+      - "3000:3000" # health check and prometheus metrics endpoint
 
 volumes:
   mongo_data:

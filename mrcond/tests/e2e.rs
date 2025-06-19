@@ -305,10 +305,39 @@ async fn create_pubsub(settings: &Settings) -> (Producer, Consumer) {
     (producer, consumer)
 }
 
+async fn wait_for_metrics() {
+    // Test metrics endpoint
+    loop {
+        let metrics_response = match reqwest::get("http://localhost:3000/metrics").await {
+            Ok(response) => match response.text().await {
+                Ok(text) => text,
+                Err(_) => continue,
+            },
+            Err(_) => continue,
+        };
+
+        println!("Metrics response: {}", metrics_response);
+
+        // Verify that metrics contain expected data
+        // assert!(metrics_response.contains("mrcon_running_servers_total"));
+        // assert!(metrics_response.contains("mrcon_collection_servers"));
+        // assert!(metrics_response.contains("mrcon_tasks_started_total"));
+
+        // Check if running total is 1, if so break the loop
+        if metrics_response.contains("mrcon_running_servers_total 1") {
+            break;
+        }
+
+        // Wait a bit before checking again
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test() {
     let mut cluster = Cluster::start();
-    tokio::time::sleep(Duration::from_secs(10)).await;
+
+    wait_for_metrics().await;
 
     let settings = load_settings(
         "tests/data/simple/config.yaml",
@@ -319,7 +348,7 @@ async fn test() {
 
     let (producer, consumer) = create_pubsub(&settings).await;
 
-    tokio::time::sleep(Duration::from_secs(30)).await;
+    // tokio::time::sleep(Duration::from_secs(30)).await;
 
     producer_consumer_send_in_bulk(producer.clone(), consumer.clone(), input.clone()).await;
     producer_consumer_send_one_by_one(producer, consumer, input).await;
@@ -332,6 +361,21 @@ async fn test() {
         .unwrap();
 
     assert_eq!(health_response, "OK");
+
+    // Test metrics endpoint
+    let metrics_response = reqwest::get("http://localhost:3000/metrics")
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+
+    println!("Metrics response: {}", metrics_response);
+
+    // Verify that metrics contain expected data
+    assert!(metrics_response.contains("mrcon_running_servers_total"));
+    assert!(metrics_response.contains("mrcon_collection_servers"));
+    assert!(metrics_response.contains("mrcon_tasks_started_total"));
     cluster.stop();
 }
 
