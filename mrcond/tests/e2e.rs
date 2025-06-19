@@ -319,6 +319,8 @@ async fn test() {
 
     let (producer, consumer) = create_pubsub(&settings).await;
 
+    tokio::time::sleep(Duration::from_secs(30)).await;
+
     producer_consumer_send_in_bulk(producer.clone(), consumer.clone(), input.clone()).await;
     producer_consumer_send_one_by_one(producer, consumer, input).await;
 
