@@ -12,8 +12,5 @@ jobs:
       # Ensure rustfmt is installed and setup problem matcher
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: |
-          (while true; do docker compose logs --tail=100; sleep 10; done) &
-          export LOG_TAIL_PID=$!
           make check check-format check-clippy build test
-          kill $LOG_TAIL_PID
         timeout-minutes: 30
