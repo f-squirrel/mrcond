@@ -1,0 +1,14 @@
+# syntax=docker/dockerfile:1
+
+FROM rust:latest AS build-env
+
+WORKDIR /app
+COPY ./ /app
+
+RUN cargo build --workspace --release
+
+FROM gcr.io/distroless/cc-debian12
+
+COPY --from=build-env /app/target/release/mrcond /mrcond
+
+ENTRYPOINT ["./mrcond"]
