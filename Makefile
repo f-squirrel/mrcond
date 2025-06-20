@@ -12,6 +12,8 @@ build-release:
 build-debug:
 	cargo build --workspace
 
+build-docker-release:
+	docker build -t mrcond:latest -f ./mrcond/Dockerfile.release .
 clean:
 	cargo clean
 
