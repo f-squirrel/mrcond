@@ -3,7 +3,6 @@ resolver = "2"
 members = ["mrcon", "mrcond"]
 
 [workspace.package]
-version = "0.1.0"
 license = "MIT"
 authors = ["Dmitry Danilov"]
 edition = "2021"
