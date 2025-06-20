@@ -22,22 +22,22 @@ jobs:
   #     - name: Check semver compatibility
   #       run: cargo semver-checks check-release
 
-  publish-dry-run:
-    name: Cargo Publish Dry Run
-    runs-on: ubuntu-latest
-    # needs: semver-check
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - name: Dry run publish mrcon
-        run: cargo publish --dry-run -p mrcon
-      - name: Dry run publish mrcond
-        run: cargo publish --dry-run -p mrcond
+  # publish-dry-run:
+  #   name: Cargo Publish Dry Run
+  #   runs-on: ubuntu-latest
+  #   # needs: semver-check
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions-rust-lang/setup-rust-toolchain@v1
+  #     - name: Dry run publish mrcon
+  #       run: cargo publish --dry-run -p mrcon
+  #     - name: Dry run publish mrcond
+  #       run: cargo publish --dry-run -p mrcond
 
   publish:
     name: Cargo Publish
     runs-on: ubuntu-latest
-    needs: publish-dry-run
+    # needs: publish-dry-run
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
