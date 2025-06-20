@@ -10,7 +10,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-mrcon = { path = "../mrcon" }
+mrcon = { version = "0.1.0", path = "../mrcon" }
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
