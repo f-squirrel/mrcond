@@ -1,4 +1,4 @@
-[![Test Suite](https://github.com/f-squirrel/mrcond/actions/workflows/ci.yml/badge.svg)](https://github.com/f-squirrel/mrcond/actions/workflows/ci.yml) [![Audit](https://github.com/f-squirrel/mrcond/actions/workflows/audit.yml/badge.svg?branch=master)](https://github.com/f-squirrel/mrcond/actions/workflows/audit.yml)
+[![Test Suite](https://github.com/f-squirrel/mrcond/actions/workflows/ci.yml/badge.svg)](https://github.com/f-squirrel/mrcond/actions/workflows/ci.yml) [![Audit](https://github.com/f-squirrel/mrcond/actions/workflows/audit.yml/badge.svg?branch=master)](https://github.com/f-squirrel/mrcond/actions/workflows/audit.yml) [![Semver](https://github.com/f-squirrel/mrcond/actions/workflows/semver.yml/badge.svg?branch=master)](https://github.com/f-squirrel/mrcond/actions/workflows/semver.yml)
 
 # MongoDB-RabbitMQ Connector
 
