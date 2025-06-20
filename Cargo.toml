@@ -16,16 +16,16 @@ lapin = { version = "3" }
 futures-util = "0.3"
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
-config = "0.13"
-tracing = "0.1"
+serde = { version = "1", features = ["derive"] }
+config = "0"
+tracing = "0"
 bson = { version = "2" }
 thiserror = "2"
-async-trait = "0.1"
-tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
-clap = { version = "4.5", features = ["derive"] }
-anyhow = "1.0"
-axum = "0.8"
-reqwest = { version = "0.12" }
-prometheus = "0.14"
-axum-prometheus = "0.8"
+async-trait = "0"
+tracing-subscriber = { version = "0", features = ["fmt", "env-filter"] }
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+axum = "0"
+reqwest = { version = "0" }
+prometheus = "0"
+axum-prometheus = "0"
