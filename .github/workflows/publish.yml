@@ -1,6 +1,7 @@
 name: Publish
 
 on:
+  workflow_dispatch:  # Enable manual trigger
   push:
     tags:
       - "v*"
