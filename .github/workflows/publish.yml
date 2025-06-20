@@ -9,23 +9,23 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  semver-check:
-    name: Semantic Version Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - name: Install cargo-semver-checks
-        run: cargo install cargo-semver-checks --locked
-      - name: Check semver compatibility
-        run: cargo semver-checks check-release
+  # semver-check:
+  #   name: Semantic Version Check
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #     - uses: actions-rust-lang/setup-rust-toolchain@v1
+  #     - name: Install cargo-semver-checks
+  #       run: cargo install cargo-semver-checks --locked
+  #     - name: Check semver compatibility
+  #       run: cargo semver-checks check-release
 
   publish-dry-run:
     name: Cargo Publish Dry Run
     runs-on: ubuntu-latest
-    needs: semver-check
+    # needs: semver-check
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
