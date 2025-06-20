@@ -1,6 +1,7 @@
 [package]
 name = "mrcon"
 version = "0.1.0"
+description = "MongoDB to RabbitMQ connector library for streaming change events"
 
 authors.workspace = true
 edition.workspace = true

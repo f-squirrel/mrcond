@@ -1,6 +1,7 @@
 [package]
 name = "mrcond"
 version = "0.1.0"
+description = "MongoDB to RabbitMQ connector daemon - CLI tool for streaming MongoDB change events to RabbitMQ"
 
 authors.workspace = true
 edition.workspace = true

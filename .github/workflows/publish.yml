@@ -1,0 +1,118 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  semver-check:
+    name: Semantic Version Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install cargo-semver-checks
+        run: cargo install cargo-semver-checks --locked
+      - name: Check semver compatibility
+        run: cargo semver-checks check-release
+
+  publish-dry-run:
+    name: Cargo Publish Dry Run
+    runs-on: ubuntu-latest
+    needs: semver-check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Dry run publish mrcon
+        run: cargo publish --dry-run -p mrcon
+      - name: Dry run publish mrcond
+        run: cargo publish --dry-run -p mrcond
+
+  publish:
+    name: Cargo Publish
+    runs-on: ubuntu-latest
+    needs: publish-dry-run
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Publish mrcon to crates.io
+        run: cargo publish -p mrcon --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: Wait for mrcon to be available
+        run: |
+          echo "Waiting for mrcon to be available on crates.io..."
+          sleep 30
+          for i in {1..10}; do
+            if cargo search mrcon | grep -q "mrcon ="; then
+              echo "mrcon is now available on crates.io"
+              break
+            fi
+            echo "Attempt $i: mrcon not yet available, waiting..."
+            sleep 30
+          done
+      - name: Publish mrcond to crates.io
+        run: cargo publish -p mrcond --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: publish
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      - name: Generate changelog
+        id: changelog
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            # Extract changelog section for this version
+            awk '/^## \[?'${{ steps.version.outputs.version }}'\]?/{flag=1; next} /^## \[?[0-9]/{flag=0} flag' CHANGELOG.md > temp_changelog.md
+            if [ -s temp_changelog.md ]; then
+              echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+              cat temp_changelog.md >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            else
+              echo "CHANGELOG=No changelog found for version ${{ steps.version.outputs.version }}" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "CHANGELOG=See commit history for changes in this release." >> $GITHUB_OUTPUT
+          fi
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.version.outputs.version }}
+          body: |
+            ## What's Changed
+
+            ${{ steps.changelog.outputs.CHANGELOG }}
+
+            ## Crates Published
+
+            - `mrcon` v${{ steps.version.outputs.version }}
+            - `mrcond` v${{ steps.version.outputs.version }}
+
+            ## Installation
+
+            ```bash
+            cargo install mrcond
+            ```
+
+            Or add to your `Cargo.toml`:
+            ```toml
+            [dependencies]
+            mrcon = "${{ steps.version.outputs.version }}"
+            ```
+          draft: false
+          prerelease: ${{ contains(github.ref, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
