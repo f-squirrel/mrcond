@@ -82,13 +82,13 @@ Examples:
 
 ```sh
 # Set MongoDB connection string
-MRCON_CONNECTIONS__MONGO_URI=mongodb://localhost:27017
+MRCON_MONGO_URI="mongodb://mongodb:27017/"
 
 # Set RabbitMQ connection string
-MRCON_CONNECTIONS__RABBITMQ_URI=amqp://guest:guest@localhost:5672/
+MRCON_RABBITMQ_URI="amqp://guest:guest@rabbitmq:5672/my_vhost"
 
 # Set log level (info, debug, warn, etc.)
-MRCON_LOG=info
+MRCON_LOG="info"
 ```
 
 - The prefix is set by `--prefix` (default: `MRCON`).
@@ -96,6 +96,10 @@ MRCON_LOG=info
 ## Health check
 
 A health endpoint is available at `http://localhost:3000/health` and returns HTTP 200 OK.
+
+## Metrics
+
+Prometheus metrics are exposed at `http://localhost:3000/metrics` for monitoring and observability.
 
 ## License
 
