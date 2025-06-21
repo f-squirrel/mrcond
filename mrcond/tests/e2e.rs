@@ -280,7 +280,7 @@ fn load_input_data(file: &str) -> Vec<serde_json::Value> {
     serde_json::from_reader(file).unwrap()
 }
 
-async fn create_pubsub(settings: &Settings) -> (Producer, Consumer) {
+async fn create_pubsub(settings: &Settings) -> (Client, Producer, Consumer) {
     let mut counter = 0;
     let client = loop {
         match Client::with_uri_str(settings.connections().mongo_uri.clone()).await {
@@ -302,14 +302,14 @@ async fn create_pubsub(settings: &Settings) -> (Producer, Consumer) {
         }
     };
 
-    let producer = Producer::new(client, &settings.collections()[0]).await;
+    let producer = Producer::new(client.clone(), &settings.collections()[0]).await;
     let consumer = Consumer::new(
         &settings.connections().rabbitmq_uri,
         &settings.collections()[0].rabbitmq.stream_name,
     )
     .await
     .unwrap();
-    (producer, consumer)
+    (client, producer, consumer)
 }
 
 async fn wait_for_metrics() {
@@ -353,9 +353,7 @@ async fn test() {
 
     let input = load_input_data("tests/data/simple/input.json");
 
-    let (producer, consumer) = create_pubsub(&settings).await;
-
-    // tokio::time::sleep(Duration::from_secs(30)).await;
+    let (client, producer, consumer) = create_pubsub(&settings).await;
 
     producer_consumer_send_in_bulk(producer.clone(), consumer.clone(), input.clone()).await;
     producer_consumer_send_one_by_one(producer, consumer, input).await;
@@ -383,6 +381,9 @@ async fn test() {
     assert!(metrics_response.contains("mrcon_running_servers_total"));
     assert!(metrics_response.contains("mrcon_collection_servers"));
     assert!(metrics_response.contains("mrcon_tasks_started_total"));
+
+    watched_collection_is_dropped(client).await;
+
     cluster.stop();
 }
 
@@ -443,4 +444,33 @@ async fn producer_consumer_send_one_by_one(
         }
     });
     assert_eq!(sent.unwrap(), full_docs);
+}
+
+async fn watched_collection_is_dropped(client: Client) {
+    let docker = bollard::Docker::connect_with_socket_defaults().unwrap();
+
+    let options = Some(bollard::query_parameters::InspectContainerOptions { size: false });
+    let state = docker
+        .inspect_container("connector", options.clone())
+        .await
+        .unwrap();
+    assert!(state.state.unwrap().running.unwrap());
+    client
+        .database("test")
+        .collection::<Document>("testcoll")
+        .drop()
+        .await
+        .unwrap();
+
+    tokio::time::sleep(Duration::from_secs(5)).await;
+    let state = docker
+        .inspect_container("connector", options.clone())
+        .await
+        .unwrap();
+    let exit_code = state.state.unwrap().exit_code.unwrap();
+    assert_eq!(
+        exit_code, 0,
+        "Connector container exited with code {}",
+        exit_code
+    );
 }

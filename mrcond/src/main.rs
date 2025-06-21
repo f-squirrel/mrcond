@@ -6,6 +6,7 @@ use mrcon::config::{Connections, Settings};
 use mrcon::metrics::Metrics;
 use mrcon::ConnectorServer;
 
+use tracing::info;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
@@ -76,8 +77,16 @@ async fn main() -> Result<()> {
         server.serve().await
     });
 
-    let (health_res, server_res) = tokio::try_join!(health_api, server)?;
-    health_res?;
-    server_res?;
-    Ok(())
+    tokio::select! {
+        health_result = health_api => {
+            let result = health_result?;
+            info!("Health API server exited, shutting down");
+            result.map_err(Into::into)
+        }
+        server_result = server => {
+            let result = server_result?;
+            info!("Connector server exited, shutting down");
+            result.map_err(Into::into)
+        }
+    }
 }
