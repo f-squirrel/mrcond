@@ -5,7 +5,8 @@ members = ["mrcon", "mrcond"]
 [workspace.package]
 license = "MIT"
 authors = ["Dmitry Danilov"]
-edition = "2021"
+edition = "2024"
+rust-version = "1.86"
 keywords = ["mongodb", "rabbitmq", "connector", "cdc", "rust"]
 categories = ["mongodb", "rabbitmq", "connector", "cdc", "rust"]
 repository = "https://github.com/f-squirrel/mrcond"

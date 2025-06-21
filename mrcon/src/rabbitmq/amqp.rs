@@ -4,8 +4,8 @@ use super::error::Error;
 use super::publish::Publish;
 use crate::config::RabbitMq;
 use lapin::{
-    options::BasicPublishOptions, publisher_confirm::Confirmation, types::FieldTable,
-    BasicProperties, Channel, Connection, ConnectionProperties,
+    BasicProperties, Channel, Connection, ConnectionProperties, options::BasicPublishOptions,
+    publisher_confirm::Confirmation, types::FieldTable,
 };
 use mongodb::{bson::Document, change_stream::event::ChangeStreamEvent};
 use serde_json;

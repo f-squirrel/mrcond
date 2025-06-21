@@ -5,7 +5,7 @@ use std::thread;
 use std::time::Duration;
 
 use bson::Document;
-use lapin::{options::*, types::FieldTable, ConnectionProperties};
+use lapin::{ConnectionProperties, options::*, types::FieldTable};
 use mongodb::Client;
 use mongodb::Database;
 use mrcon::config::{Collection, Connections, Settings};
@@ -36,10 +36,8 @@ impl Cluster {
         if let Some(stdout) = cluster.stdout.take() {
             let reader = BufReader::new(stdout);
             thread::spawn(move || {
-                for line in reader.lines() {
-                    if let Ok(line) = line {
-                        println!("[DOCKER-COMPOSE STDOUT] {}", line);
-                    }
+                for line in reader.lines().map_while(Result::ok) {
+                    println!("[DOCKER-COMPOSE STDOUT] {}", line);
                 }
             });
         }
@@ -48,10 +46,8 @@ impl Cluster {
         if let Some(stderr) = cluster.stderr.take() {
             let reader = BufReader::new(stderr);
             thread::spawn(move || {
-                for line in reader.lines() {
-                    if let Ok(line) = line {
-                        println!("[DOCKER-COMPOSE STDERR] {}", line);
-                    }
+                for line in reader.lines().map_while(Result::ok) {
+                    println!("[DOCKER-COMPOSE STDERR] {}", line);
                 }
             });
         }

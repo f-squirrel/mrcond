@@ -1,5 +1,5 @@
 use crate::config;
-use mongodb::{bson::doc, change_stream::event::ResumeToken, Client, Collection};
+use mongodb::{Client, Collection, bson::doc, change_stream::event::ResumeToken};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
