@@ -39,7 +39,7 @@ check-format:
 	cargo fmt --all --check
 
 test:
-	cargo test --workspace -- --nocapture
+	cargo test --workspace -- --nocapture --test-threads=1
 
 test-integration:
 	@echo "Running integration tests with docker-compose output..."

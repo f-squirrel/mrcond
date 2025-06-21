@@ -341,7 +341,7 @@ async fn wait_for_metrics() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn test() {
+async fn test_main() {
     let mut cluster = Cluster::start();
 
     wait_for_metrics().await;
@@ -383,6 +383,29 @@ async fn test() {
     assert!(metrics_response.contains("mrcon_tasks_started_total"));
 
     watched_collection_is_dropped(client).await;
+
+    cluster.stop();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_restart_mongo_and_rabbit() {
+    let mut cluster = Cluster::start();
+
+    wait_for_metrics().await;
+
+    let metrics_response = reqwest::get("http://localhost:3000/metrics")
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+
+    println!("Metrics response: {}", metrics_response);
+
+    // Verify that metrics contain expected data
+    assert!(metrics_response.contains("mrcon_running_servers_total"));
+    assert!(metrics_response.contains("mrcon_collection_servers"));
+    assert!(metrics_response.contains("mrcon_tasks_started_total"));
 
     cluster.stop();
 }
@@ -444,6 +467,45 @@ async fn producer_consumer_send_one_by_one(
         }
     });
     assert_eq!(sent.unwrap(), full_docs);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_metrics_when_mongo_is_unavailable() {
+    let mut cluster = Cluster::start();
+    wait_for_metrics().await;
+    let docker = bollard::Docker::connect_with_socket_defaults().unwrap();
+    docker
+        .stop_container(
+            "mongo",
+            None::<bollard::query_parameters::StopContainerOptions>,
+        )
+        .await
+        .unwrap();
+
+    let options = Some(bollard::query_parameters::InspectContainerOptions { size: false });
+    let state = docker
+        .inspect_container("mongo", options.clone())
+        .await
+        .unwrap();
+    assert!(!state.state.unwrap().running.unwrap());
+
+    tokio::time::sleep(Duration::from_secs(350)).await;
+
+    // Check if the metrics endpoint is still available
+    let metrics_response = reqwest::get("http://localhost:3000/metrics")
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+
+    // Verify that metrics contain expected data
+    assert!(metrics_response.contains("mrcon_running_servers_total"));
+    assert!(metrics_response.contains("mrcon_collection_servers"));
+    assert!(metrics_response.contains("mrcon_tasks_started_total"));
+
+    assert!(metrics_response.contains("mrcon_running_servers_total 0"));
+    cluster.stop();
 }
 
 async fn watched_collection_is_dropped(client: Client) {
