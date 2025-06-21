@@ -101,6 +101,10 @@ A health endpoint is available at `http://localhost:3000/health` and returns HTT
 
 Prometheus metrics are exposed at `http://localhost:3000/metrics` for monitoring and observability.
 
+## Credits
+
+This tool is inspired by [mongodb-nats-connector](https://github.com/damianiandrea/mongodb-nats-connector).
+
 ## License
 
 Licensed under the MIT License. See the main repository for details.
