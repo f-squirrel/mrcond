@@ -29,3 +29,4 @@ axum = "0"
 reqwest = { version = "0" }
 prometheus = "0"
 axum-prometheus = "0"
+bollard = "0"

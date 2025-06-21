@@ -30,3 +30,4 @@ serde_json.workspace = true
 serde.workspace = true
 futures-util.workspace = true
 reqwest.workspace = true
+bollard.workspace = true
