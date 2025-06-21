@@ -225,11 +225,18 @@ impl Consumer {
 
     pub async fn receive_all(&self, expected: usize) -> Vec<serde_json::Value> {
         let mut received = vec![];
+        let consumer_tag = format!(
+            "consumer_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        );
         let mut consumer = self
             .channel
             .basic_consume(
                 &self.queue,
-                "my tag",
+                consumer_tag.as_str(),
                 BasicConsumeOptions::default(),
                 FieldTable::default(),
             )
