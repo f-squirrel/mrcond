@@ -1,14 +1,14 @@
 //! Main entry point for the binary daemon
 use anyhow::Result;
-use axum::{routing::get, Router};
+use axum::{Router, routing::get};
 use clap::Parser;
+use mrcon::ConnectorServer;
 use mrcon::config::{Connections, Settings};
 use mrcon::metrics::Metrics;
-use mrcon::ConnectorServer;
 
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 /// MongoDB-RabbitMQ Connector Daemon
 #[derive(Parser, Debug)]

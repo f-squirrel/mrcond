@@ -4,7 +4,7 @@ use crate::mongo::resume_tokens::ResumeTokensDB;
 use crate::rabbitmq::Publisher;
 use crate::{config::WatchedDb, rabbitmq::amqp};
 use futures_util::stream::StreamExt;
-use mongodb::{bson::Document, Client};
+use mongodb::{Client, bson::Document};
 use thiserror::Error;
 use tracing::{debug, error, info, warn};
 
