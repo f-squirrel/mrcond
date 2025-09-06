@@ -24,7 +24,6 @@ axum-prometheus.workspace = true
 
 
 [dev-dependencies]
-bson.workspace = true
 mongodb.workspace = true
 lapin.workspace = true
 serde_json.workspace = true

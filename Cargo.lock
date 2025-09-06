@@ -2221,7 +2221,6 @@ name = "mrcon"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "bson",
  "futures-util",
  "lapin",
  "mongodb",
@@ -2241,7 +2240,6 @@ dependencies = [
  "axum",
  "axum-prometheus",
  "bollard",
- "bson",
  "clap",
  "config",
  "futures-util",

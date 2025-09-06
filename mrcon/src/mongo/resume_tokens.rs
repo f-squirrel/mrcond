@@ -94,7 +94,7 @@ impl ResumeTokensDB {
         resume_token: &ResumeToken,
     ) -> mongodb::error::Result<()> {
         let filter = doc! {"stream_name": stream_name};
-        let update = doc! {"$set": {"resume_token": bson::to_bson(resume_token)?}};
+        let update = doc! {"$set": {"resume_token": mongodb::bson::to_bson(resume_token)?}};
 
         // Use upsert: true to insert if not exists, or update if exists
         let options = mongodb::options::UpdateOptions::builder()
