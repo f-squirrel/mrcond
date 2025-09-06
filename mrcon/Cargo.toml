@@ -18,7 +18,6 @@ serde_json.workspace = true
 tokio.workspace = true
 serde.workspace = true
 tracing.workspace = true
-bson.workspace = true
 thiserror.workspace = true
 async-trait.workspace = true
 prometheus.workspace = true

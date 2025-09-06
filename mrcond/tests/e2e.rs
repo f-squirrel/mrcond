@@ -4,10 +4,10 @@ use std::process::{Child, Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
-use bson::Document;
 use lapin::{ConnectionProperties, options::*, types::FieldTable};
 use mongodb::Client;
 use mongodb::Database;
+use mongodb::bson::Document;
 use mrcon::config::{Collection, Connections, Settings};
 
 struct Cluster {

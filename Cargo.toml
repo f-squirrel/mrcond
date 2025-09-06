@@ -20,7 +20,6 @@ tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 config = "0"
 tracing = "0"
-bson = { version = "2" }
 thiserror = "2"
 async-trait = "0"
 tracing-subscriber = { version = "0", features = ["fmt", "env-filter"] }
