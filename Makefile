@@ -66,8 +66,7 @@ logs-rabbitmq:
 
 test-metrics:
 	@echo "Running metrics endpoint tests..."
-	@chmod +x test-metrics.sh
-	./test-metrics.sh
+	bash ./test-metrics.sh
 
 help:
 	@echo "Available targets:"

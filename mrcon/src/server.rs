@@ -13,7 +13,7 @@ pub enum Error {
     Connector {
         #[source]
         source: crate::mongo::connector::Error,
-        collection: crate::config::Collection,
+        collection: Option<crate::config::Collection>,
     },
 }
 
@@ -31,8 +31,42 @@ pub struct Server {
 }
 
 const RETRY_DELAY: Duration = Duration::from_secs(5);
+const CONNECTION_TIMEOUT: Duration = Duration::from_secs(300); // 5 minutes
 
 impl Server {
+    /// Generic retry function with timeout for connection operations
+    async fn retry_with_timeout<T, F, Fut, E>(
+        operation: F,
+        timeout: Duration,
+        retry_delay: Duration,
+        operation_name: &str,
+    ) -> Result<T, E>
+    where
+        F: Fn() -> Fut,
+        Fut: std::future::Future<Output = Result<T, E>>,
+        E: std::fmt::Debug,
+    {
+        let start_time = std::time::Instant::now();
+
+        loop {
+            match operation().await {
+                Ok(result) => {
+                    info!("{} successful", operation_name);
+                    return Ok(result);
+                }
+                Err(e) => {
+                    error!(error = ?e, "Failed {}", operation_name);
+
+                    if start_time.elapsed() >= timeout {
+                        error!("{} attempts timed out after {:?}", operation_name, timeout);
+                        return Err(e);
+                    }
+
+                    tokio::time::sleep(retry_delay).await;
+                }
+            }
+        }
+    }
     /// Create a new `Server` with the given settings.
     pub fn new(settings: Settings) -> Self {
         Self {
@@ -52,38 +86,40 @@ impl Server {
     }
 
     async fn connect_to_mongo(settings: &Settings) -> Result<Client, Error> {
-        loop {
-            match Client::with_uri_str(settings.connections().mongo_uri.as_str()).await {
-                Ok(client) => {
-                    info!("MongoDB connection initialized successfully");
-                    return Ok(client);
-                }
-                Err(e) => {
-                    error!(error = ?e, "Failed to initialize MongoDB connection");
-                    tokio::time::sleep(RETRY_DELAY).await;
-                }
-            }
-        }
+        let mongo_uri = settings.connections().mongo_uri.clone();
+
+        Self::retry_with_timeout(
+            || async { Client::with_uri_str(&mongo_uri).await },
+            CONNECTION_TIMEOUT,
+            RETRY_DELAY,
+            "MongoDB connection initialization",
+        )
+        .await
+        .map_err(|e: mongodb::error::Error| Error::Connector {
+            source: crate::mongo::connector::Error::Mongo(e),
+            collection: None,
+        })
     }
 
     async fn connect_to_rabbitmq(settings: &Settings) -> Result<Arc<lapin::Connection>, Error> {
-        loop {
-            match lapin::Connection::connect(
-                settings.connections().rabbitmq_uri.as_str(),
-                lapin::ConnectionProperties::default(),
-            )
-            .await
-            {
-                Ok(client) => {
-                    info!("RabbitMQ connection initialized successfully");
-                    return Ok(Arc::new(client));
-                }
-                Err(e) => {
-                    error!(error = ?e, "Failed to initialize RabbitMQ connection");
-                    tokio::time::sleep(RETRY_DELAY).await;
-                }
-            }
-        }
+        let rabbitmq_uri = settings.connections().rabbitmq_uri.clone();
+
+        let result = Self::retry_with_timeout(
+            || async {
+                lapin::Connection::connect(&rabbitmq_uri, lapin::ConnectionProperties::default())
+                    .await
+            },
+            CONNECTION_TIMEOUT,
+            RETRY_DELAY,
+            "RabbitMQ connection initialization",
+        )
+        .await
+        .map_err(|e| Error::Connector {
+            source: crate::mongo::connector::Error::RabbitMq(e.into()),
+            collection: None,
+        })?;
+
+        Ok(Arc::new(result))
     }
 
     /// Connect to MongoDB and RabbitMQ, returning both clients.
@@ -115,7 +151,7 @@ impl Server {
             tracing::error!(error = ?e, collection = %coll_name, "Failed to create connector");
             Error::Connector {
                 source: e,
-                collection: collection.clone(),
+                collection: Some(collection.clone()),
             }
         })?;
 
@@ -123,7 +159,7 @@ impl Server {
             tracing::error!(error = ?e, collection = %coll_name, "Failed to connect to collection");
             Error::Connector {
                 source: e,
-                collection: collection.clone(),
+                collection: Some(collection.clone()),
             }
         })
     }
@@ -171,6 +207,8 @@ impl Server {
                 }
                 Ok(Err(e)) => match e {
                     Error::Connector { source, collection } => {
+                        let collection =
+                            collection.expect("Collection should be present in Connector error");
                         error!(error = ?source, collection = %collection.watched.coll_name, "Connector task failed, restarting");
 
                         // Record the failure and restart reason
