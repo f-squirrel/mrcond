@@ -1,18 +1,22 @@
 //! Metrics module for Prometheus integration
 
+#[cfg(feature = "metrics")]
 use prometheus::{Counter, CounterVec, Encoder, Gauge, GaugeVec, Opts, Registry, TextEncoder};
+#[cfg(feature = "metrics")]
 use std::collections::HashMap;
+#[cfg(feature = "metrics")]
 use std::sync::{Arc, Mutex};
 
 /// Inner metrics implementation containing the actual Prometheus metrics
+#[cfg(feature = "metrics")]
 #[derive(Clone)]
 struct MetricsInner {
-    registry: Arc<Registry>,
-    running_servers: Arc<Gauge>,
-    collection_servers: Arc<GaugeVec>,
-    task_restarts: Arc<CounterVec>,
-    task_failures: Arc<CounterVec>,
-    task_total_started: Arc<Counter>,
+    registry: Option<Arc<Registry>>,
+    running_servers: Option<Arc<Gauge>>,
+    collection_servers: Option<Arc<GaugeVec>>,
+    task_restarts: Option<Arc<CounterVec>>,
+    task_failures: Option<Arc<CounterVec>>,
+    task_total_started: Option<Arc<Counter>>,
     server_count: Arc<Mutex<usize>>,
     collection_counts: Arc<Mutex<HashMap<String, usize>>>,
 }
@@ -20,7 +24,8 @@ struct MetricsInner {
 /// Metrics collector for the MongoDB-RabbitMQ connector
 #[derive(Clone)]
 pub struct Metrics {
-    inner: Option<MetricsInner>,
+    #[cfg(feature = "metrics")]
+    inner: MetricsInner,
 }
 
 impl Default for Metrics {
@@ -29,163 +34,154 @@ impl Default for Metrics {
     }
 }
 
+#[cfg(feature = "metrics")]
 impl Metrics {
     /// Create a new metrics collector with Prometheus metrics enabled
     pub fn new() -> Self {
         Self {
-            inner: Some(MetricsInner::new()),
+            inner: MetricsInner::new(),
         }
     }
 
     /// Create a dummy metrics collector that ignores all calls
     pub fn dummy() -> Self {
-        Self { inner: None }
+        Self {
+            inner: MetricsInner::new_dummy(),
+        }
     }
 
     /// Increment the total server count
     pub fn increment_servers(&self) {
-        if let Some(inner) = &self.inner {
-            let mut count = inner.server_count.lock().unwrap();
-            *count += 1;
-            inner.running_servers.set(*count as f64);
-        }
+        self.inner.increment_servers();
     }
 
     /// Decrement the total server count
     pub fn decrement_servers(&self) {
-        if let Some(inner) = &self.inner {
-            let mut count = inner.server_count.lock().unwrap();
-            if *count > 0 {
-                *count -= 1;
-            }
-            inner.running_servers.set(*count as f64);
-        }
+        self.inner.decrement_servers();
     }
 
     /// Set the total server count
     pub fn set_server_count(&self, count: usize) {
-        if let Some(inner) = &self.inner {
-            let mut current_count = inner.server_count.lock().unwrap();
-            *current_count = count;
-            inner.running_servers.set(count as f64);
-        }
+        self.inner.set_server_count(count);
     }
 
     /// Increment the server count for a specific collection
     pub fn increment_collection_server(&self, collection: &str, database: &str) {
-        if let Some(inner) = &self.inner {
-            let key = format!("{}:{}", database, collection);
-            let mut counts = inner.collection_counts.lock().unwrap();
-            let count = counts.entry(key).or_insert(0);
-            *count += 1;
-
-            inner
-                .collection_servers
-                .with_label_values(&[collection, database])
-                .set(*count as f64);
-        }
+        self.inner.increment_collection_server(collection, database);
     }
 
     /// Decrement the server count for a specific collection
     pub fn decrement_collection_server(&self, collection: &str, database: &str) {
-        if let Some(inner) = &self.inner {
-            let key = format!("{}:{}", database, collection);
-            let mut counts = inner.collection_counts.lock().unwrap();
-            if let Some(count) = counts.get_mut(&key) {
-                if *count > 0 {
-                    *count -= 1;
-                }
-                inner
-                    .collection_servers
-                    .with_label_values(&[collection, database])
-                    .set(*count as f64);
-            }
-        }
+        self.inner.decrement_collection_server(collection, database);
     }
 
     /// Set the server count for a specific collection
     pub fn set_collection_server_count(&self, collection: &str, database: &str, count: usize) {
-        if let Some(inner) = &self.inner {
-            let key = format!("{}:{}", database, collection);
-            let mut counts = inner.collection_counts.lock().unwrap();
-            counts.insert(key, count);
-
-            inner
-                .collection_servers
-                .with_label_values(&[collection, database])
-                .set(count as f64);
-        }
+        self.inner
+            .set_collection_server_count(collection, database, count);
     }
 
     /// Record a task restart
     pub fn record_task_restart(&self, collection: &str, database: &str, reason: &str) {
-        if let Some(inner) = &self.inner {
-            inner
-                .task_restarts
-                .with_label_values(&[collection, database, reason])
-                .inc();
-        }
+        self.inner.record_task_restart(collection, database, reason);
     }
 
     /// Record a task failure
     pub fn record_task_failure(&self, collection: &str, database: &str, error_type: &str) {
-        if let Some(inner) = &self.inner {
-            inner
-                .task_failures
-                .with_label_values(&[collection, database, error_type])
-                .inc();
-        }
+        self.inner
+            .record_task_failure(collection, database, error_type);
     }
 
     /// Record a task start
     pub fn record_task_start(&self) {
-        if let Some(inner) = &self.inner {
-            inner.task_total_started.inc();
-        }
+        self.inner.record_task_start();
     }
 
     /// Get the current total server count
     pub fn get_server_count(&self) -> usize {
-        if let Some(inner) = &self.inner {
-            *inner.server_count.lock().unwrap()
-        } else {
-            0
-        }
+        self.inner.get_server_count()
     }
 
     /// Get the current server count for a specific collection
     pub fn get_collection_server_count(&self, collection: &str, database: &str) -> usize {
-        if let Some(inner) = &self.inner {
-            let key = format!("{}:{}", database, collection);
-            let counts = inner.collection_counts.lock().unwrap();
-            *counts.get(&key).unwrap_or(&0)
-        } else {
-            0
-        }
+        self.inner.get_collection_server_count(collection, database)
     }
 
     /// Export metrics in Prometheus format
     pub fn export(&self) -> Result<String, prometheus::Error> {
-        if let Some(inner) = &self.inner {
-            let encoder = TextEncoder::new();
-            let metric_families = inner.registry.gather();
-            let mut buffer = Vec::new();
-            encoder.encode(&metric_families, &mut buffer)?;
-            Ok(String::from_utf8_lossy(&buffer).to_string())
-        } else {
-            Ok(String::new())
-        }
+        self.inner.export()
     }
 
     /// Get the registry for use with axum-prometheus
     /// Returns None if metrics are disabled (dummy mode)
     pub fn registry(&self) -> Option<Arc<Registry>> {
-        self.inner.as_ref().map(|inner| inner.registry.clone())
+        self.inner.registry()
     }
 }
 
+#[cfg(not(feature = "metrics"))]
+impl Metrics {
+    /// Create a new metrics collector (no-op when metrics feature is disabled)
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    /// Create a dummy metrics collector (no-op when metrics feature is disabled)
+    pub fn dummy() -> Self {
+        Self {}
+    }
+
+    /// Increment the total server count (no-op when metrics feature is disabled)
+    pub fn increment_servers(&self) {}
+
+    /// Decrement the total server count (no-op when metrics feature is disabled)
+    pub fn decrement_servers(&self) {}
+
+    /// Set the total server count (no-op when metrics feature is disabled)
+    pub fn set_server_count(&self, _count: usize) {}
+
+    /// Increment the server count for a specific collection (no-op when metrics feature is disabled)
+    pub fn increment_collection_server(&self, _collection: &str, _database: &str) {}
+
+    /// Decrement the server count for a specific collection (no-op when metrics feature is disabled)
+    pub fn decrement_collection_server(&self, _collection: &str, _database: &str) {}
+
+    /// Set the server count for a specific collection (no-op when metrics feature is disabled)
+    pub fn set_collection_server_count(&self, _collection: &str, _database: &str, _count: usize) {}
+
+    /// Record a task restart (no-op when metrics feature is disabled)
+    pub fn record_task_restart(&self, _collection: &str, _database: &str, _reason: &str) {}
+
+    /// Record a task failure (no-op when metrics feature is disabled)
+    pub fn record_task_failure(&self, _collection: &str, _database: &str, _error_type: &str) {}
+
+    /// Record a task start (no-op when metrics feature is disabled)
+    pub fn record_task_start(&self) {}
+
+    /// Get the current total server count (always returns 0 when metrics feature is disabled)
+    pub fn get_server_count(&self) -> usize {
+        0
+    }
+
+    /// Get the current server count for a specific collection (always returns 0 when metrics feature is disabled)
+    pub fn get_collection_server_count(&self, _collection: &str, _database: &str) -> usize {
+        0
+    }
+
+    /// Export metrics in Prometheus format (returns empty string when metrics feature is disabled)
+    pub fn export(&self) -> Result<String, String> {
+        Ok(String::new())
+    }
+
+    /// Get the registry for use with axum-prometheus (always returns None when metrics feature is disabled)
+    pub fn registry(&self) -> Option<()> {
+        None
+    }
+}
+
+#[cfg(feature = "metrics")]
 impl MetricsInner {
-    /// Create a new inner metrics implementation
+    /// Create a new inner metrics implementation with full Prometheus functionality
     fn new() -> Self {
         let registry = Arc::new(Registry::new());
 
@@ -261,15 +257,156 @@ impl MetricsInner {
             .expect("Failed to register task_total_started metric");
 
         Self {
-            registry,
-            running_servers,
-            collection_servers,
-            task_restarts,
-            task_failures,
-            task_total_started,
+            registry: Some(registry),
+            running_servers: Some(running_servers),
+            collection_servers: Some(collection_servers),
+            task_restarts: Some(task_restarts),
+            task_failures: Some(task_failures),
+            task_total_started: Some(task_total_started),
             server_count: Arc::new(Mutex::new(0)),
             collection_counts: Arc::new(Mutex::new(HashMap::new())),
         }
+    }
+
+    /// Create a dummy metrics implementation that ignores all calls
+    fn new_dummy() -> Self {
+        Self {
+            registry: None,
+            running_servers: None,
+            collection_servers: None,
+            task_restarts: None,
+            task_failures: None,
+            task_total_started: None,
+            server_count: Arc::new(Mutex::new(0)),
+            collection_counts: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    /// Increment the total server count
+    fn increment_servers(&self) {
+        if let Some(running_servers) = &self.running_servers {
+            let mut count = self.server_count.lock().unwrap();
+            *count += 1;
+            running_servers.set(*count as f64);
+        }
+    }
+
+    /// Decrement the total server count
+    fn decrement_servers(&self) {
+        if let Some(running_servers) = &self.running_servers {
+            let mut count = self.server_count.lock().unwrap();
+            if *count > 0 {
+                *count -= 1;
+            }
+            running_servers.set(*count as f64);
+        }
+    }
+
+    /// Set the total server count
+    fn set_server_count(&self, count: usize) {
+        if let Some(running_servers) = &self.running_servers {
+            let mut current_count = self.server_count.lock().unwrap();
+            *current_count = count;
+            running_servers.set(count as f64);
+        }
+    }
+
+    /// Increment the server count for a specific collection
+    fn increment_collection_server(&self, collection: &str, database: &str) {
+        if let Some(collection_servers) = &self.collection_servers {
+            let key = format!("{}:{}", database, collection);
+            let mut counts = self.collection_counts.lock().unwrap();
+            let count = counts.entry(key).or_insert(0);
+            *count += 1;
+
+            collection_servers
+                .with_label_values(&[collection, database])
+                .set(*count as f64);
+        }
+    }
+
+    /// Decrement the server count for a specific collection
+    fn decrement_collection_server(&self, collection: &str, database: &str) {
+        if let Some(collection_servers) = &self.collection_servers {
+            let key = format!("{}:{}", database, collection);
+            let mut counts = self.collection_counts.lock().unwrap();
+            if let Some(count) = counts.get_mut(&key) {
+                if *count > 0 {
+                    *count -= 1;
+                }
+                collection_servers
+                    .with_label_values(&[collection, database])
+                    .set(*count as f64);
+            }
+        }
+    }
+
+    /// Set the server count for a specific collection
+    fn set_collection_server_count(&self, collection: &str, database: &str, count: usize) {
+        if let Some(collection_servers) = &self.collection_servers {
+            let key = format!("{}:{}", database, collection);
+            let mut counts = self.collection_counts.lock().unwrap();
+            counts.insert(key, count);
+
+            collection_servers
+                .with_label_values(&[collection, database])
+                .set(count as f64);
+        }
+    }
+
+    /// Record a task restart
+    fn record_task_restart(&self, collection: &str, database: &str, reason: &str) {
+        if let Some(task_restarts) = &self.task_restarts {
+            task_restarts
+                .with_label_values(&[collection, database, reason])
+                .inc();
+        }
+    }
+
+    /// Record a task failure
+    fn record_task_failure(&self, collection: &str, database: &str, error_type: &str) {
+        if let Some(task_failures) = &self.task_failures {
+            task_failures
+                .with_label_values(&[collection, database, error_type])
+                .inc();
+        }
+    }
+
+    /// Record a task start
+    fn record_task_start(&self) {
+        if let Some(task_total_started) = &self.task_total_started {
+            task_total_started.inc();
+        }
+    }
+
+    /// Get the current total server count
+    fn get_server_count(&self) -> usize {
+        *self.server_count.lock().unwrap()
+    }
+
+    /// Get the current server count for a specific collection
+    fn get_collection_server_count(&self, collection: &str, database: &str) -> usize {
+        let key = format!("{}:{}", database, collection);
+        let counts = self.collection_counts.lock().unwrap();
+        *counts.get(&key).unwrap_or(&0)
+    }
+
+    /// Export metrics in Prometheus format
+    fn export(&self) -> Result<String, prometheus::Error> {
+        if let Some(registry) = &self.registry {
+            let encoder = TextEncoder::new();
+            let metric_families = registry.gather();
+            let mut buffer = Vec::new();
+            encoder.encode(&metric_families, &mut buffer)?;
+            Ok(String::from_utf8_lossy(&buffer).to_string())
+        } else {
+            Ok(String::new())
+        }
+    }
+
+    /// Get the registry for use with axum-prometheus
+    fn registry(&self) -> Option<Arc<Registry>> {
+        self.registry.as_ref().cloned()
     }
 }
 
@@ -298,9 +435,13 @@ mod tests {
 
         assert_eq!(metrics.get_collection_server_count("test", "db"), 0);
         assert_eq!(metrics.export().unwrap(), "");
+        #[cfg(feature = "metrics")]
+        assert!(metrics.registry().is_none());
+        #[cfg(not(feature = "metrics"))]
         assert!(metrics.registry().is_none());
     }
 
+    #[cfg(feature = "metrics")]
     #[test]
     fn test_server_count() {
         let metrics = Metrics::new();
@@ -318,6 +459,7 @@ mod tests {
         assert_eq!(metrics.get_server_count(), 5);
     }
 
+    #[cfg(feature = "metrics")]
     #[test]
     fn test_collection_server_count() {
         let metrics = Metrics::new();
@@ -335,6 +477,7 @@ mod tests {
         assert_eq!(metrics.get_collection_server_count("orders", "mydb"), 3);
     }
 
+    #[cfg(feature = "metrics")]
     #[test]
     fn test_export() {
         let metrics = Metrics::new();
@@ -350,5 +493,29 @@ mod tests {
         assert!(export.contains("mrcon_task_restarts_total"));
         assert!(export.contains("mrcon_task_failures_total"));
         assert!(export.contains("mrcon_tasks_started_total"));
+    }
+
+    #[cfg(not(feature = "metrics"))]
+    #[test]
+    fn test_no_metrics_feature() {
+        let metrics = Metrics::new();
+
+        // All operations should be no-ops
+        metrics.increment_servers();
+        metrics.decrement_servers();
+        metrics.set_server_count(100);
+        assert_eq!(metrics.get_server_count(), 0);
+
+        metrics.increment_collection_server("test", "db");
+        metrics.decrement_collection_server("test", "db");
+        metrics.set_collection_server_count("test", "db", 50);
+        assert_eq!(metrics.get_collection_server_count("test", "db"), 0);
+
+        metrics.record_task_start();
+        metrics.record_task_restart("test", "db", "reason");
+        metrics.record_task_failure("test", "db", "error");
+
+        assert_eq!(metrics.export().unwrap(), "");
+        assert!(metrics.registry().is_none());
     }
 }

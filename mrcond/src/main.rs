@@ -48,6 +48,7 @@ async fn main() -> Result<()> {
     // Create shared metrics instance
     let metrics = Metrics::new();
     let metrics_for_server = metrics.clone();
+    #[cfg(feature = "metrics")]
     let metrics_for_api = metrics.clone();
 
     let health_api = tokio::spawn(async move {
@@ -55,9 +56,9 @@ async fn main() -> Result<()> {
             "OK"
         }
 
-        let metrics_clone = metrics_for_api.clone();
+        #[cfg(feature = "metrics")]
         let metrics_handler = {
-            let metrics = metrics_clone;
+            let metrics = metrics_for_api;
             move || async move {
                 metrics
                     .export()
@@ -65,9 +66,13 @@ async fn main() -> Result<()> {
             }
         };
 
+        #[cfg(feature = "metrics")]
         let app = Router::new()
             .route("/health", get(health))
             .route("/metrics", get(metrics_handler));
+
+        #[cfg(not(feature = "metrics"))]
+        let app = Router::new().route("/health", get(health));
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
         axum::serve(listener, app).await
     });

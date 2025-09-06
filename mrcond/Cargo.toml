@@ -10,6 +10,10 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[features]
+default = ["metrics"]
+metrics = ["mrcon/metrics", "dep:prometheus", "dep:axum-prometheus"]
+
 [dependencies]
 mrcon = { version = "0.1.0", path = "../mrcon" }
 tokio.workspace = true
@@ -19,8 +23,8 @@ config.workspace = true
 clap = { version = "4.5", features = ["derive"] }
 anyhow = { workspace = true }
 axum = { workspace = true }
-prometheus.workspace = true
-axum-prometheus.workspace = true
+prometheus = { workspace = true, optional = true }
+axum-prometheus = { workspace = true, optional = true }
 
 
 [dev-dependencies]

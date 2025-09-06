@@ -10,6 +10,10 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[features]
+default = ["metrics"]
+metrics = ["dep:prometheus"]
+
 [dependencies]
 mongodb.workspace = true
 lapin.workspace = true
@@ -20,4 +24,4 @@ serde.workspace = true
 tracing.workspace = true
 thiserror.workspace = true
 async-trait.workspace = true
-prometheus.workspace = true
+prometheus = { workspace = true, optional = true }
