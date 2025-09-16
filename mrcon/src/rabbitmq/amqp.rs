@@ -17,7 +17,7 @@ use tracing::trace;
 /// and publish MongoDB change stream events as JSON messages. It is used by the connector to forward
 /// change events to RabbitMQ reliably.
 pub struct Publisher {
-    pub config: RabbitMq,
+    config: RabbitMq,
     channel: Channel,
     // DD: to hold a connection while the channel is alive
     _connection: Arc<Connection>,
