@@ -7,6 +7,12 @@ use std::collections::HashMap;
 #[cfg(feature = "metrics")]
 use std::sync::{Arc, Mutex};
 
+// We need these types for the unified method signatures even when metrics are disabled
+#[cfg(not(feature = "metrics"))]
+use std::sync::Arc;
+#[cfg(not(feature = "metrics"))]
+pub struct Registry;
+
 /// Inner metrics implementation containing the actual Prometheus metrics
 #[cfg(feature = "metrics")]
 #[derive(Clone)]
@@ -34,148 +40,181 @@ impl Default for Metrics {
     }
 }
 
-#[cfg(feature = "metrics")]
 impl Metrics {
-    /// Create a new metrics collector with Prometheus metrics enabled
+    /// Create a new metrics collector
     pub fn new() -> Self {
-        Self {
-            inner: MetricsInner::new(),
+        #[cfg(feature = "metrics")]
+        {
+            Self {
+                inner: MetricsInner::new(),
+            }
+        }
+        #[cfg(not(feature = "metrics"))]
+        {
+            Self {}
         }
     }
 
     /// Create a dummy metrics collector that ignores all calls
     pub fn dummy() -> Self {
-        Self {
-            inner: MetricsInner::new_dummy(),
+        #[cfg(feature = "metrics")]
+        {
+            Self {
+                inner: MetricsInner::new_dummy(),
+            }
+        }
+        #[cfg(not(feature = "metrics"))]
+        {
+            Self {}
         }
     }
 
     /// Increment the total server count
     pub fn increment_servers(&self) {
-        self.inner.increment_servers();
+        #[cfg(feature = "metrics")]
+        {
+            self.inner.increment_servers();
+        }
     }
 
     /// Decrement the total server count
     pub fn decrement_servers(&self) {
-        self.inner.decrement_servers();
+        #[cfg(feature = "metrics")]
+        {
+            self.inner.decrement_servers();
+        }
     }
 
     /// Set the total server count
     pub fn set_server_count(&self, count: usize) {
-        self.inner.set_server_count(count);
+        #[cfg(feature = "metrics")]
+        {
+            self.inner.set_server_count(count);
+        }
+        #[cfg(not(feature = "metrics"))]
+        {
+            let _ = count; // Suppress unused parameter warning
+        }
     }
 
     /// Increment the server count for a specific collection
     pub fn increment_collection_server(&self, collection: &str, database: &str) {
-        self.inner.increment_collection_server(collection, database);
+        #[cfg(feature = "metrics")]
+        {
+            self.inner.increment_collection_server(collection, database);
+        }
+        #[cfg(not(feature = "metrics"))]
+        {
+            let _ = (collection, database); // Suppress unused parameter warnings
+        }
     }
 
     /// Decrement the server count for a specific collection
     pub fn decrement_collection_server(&self, collection: &str, database: &str) {
-        self.inner.decrement_collection_server(collection, database);
+        #[cfg(feature = "metrics")]
+        {
+            self.inner.decrement_collection_server(collection, database);
+        }
+        #[cfg(not(feature = "metrics"))]
+        {
+            let _ = (collection, database); // Suppress unused parameter warnings
+        }
     }
 
     /// Set the server count for a specific collection
     pub fn set_collection_server_count(&self, collection: &str, database: &str, count: usize) {
-        self.inner
-            .set_collection_server_count(collection, database, count);
+        #[cfg(feature = "metrics")]
+        {
+            self.inner
+                .set_collection_server_count(collection, database, count);
+        }
+        #[cfg(not(feature = "metrics"))]
+        {
+            let _ = (collection, database, count); // Suppress unused parameter warnings
+        }
     }
 
     /// Record a task restart
     pub fn record_task_restart(&self, collection: &str, database: &str, reason: &str) {
-        self.inner.record_task_restart(collection, database, reason);
+        #[cfg(feature = "metrics")]
+        {
+            self.inner.record_task_restart(collection, database, reason);
+        }
+        #[cfg(not(feature = "metrics"))]
+        {
+            let _ = (collection, database, reason); // Suppress unused parameter warnings
+        }
     }
 
     /// Record a task failure
     pub fn record_task_failure(&self, collection: &str, database: &str, error_type: &str) {
-        self.inner
-            .record_task_failure(collection, database, error_type);
+        #[cfg(feature = "metrics")]
+        {
+            self.inner
+                .record_task_failure(collection, database, error_type);
+        }
+        #[cfg(not(feature = "metrics"))]
+        {
+            let _ = (collection, database, error_type); // Suppress unused parameter warnings
+        }
     }
 
     /// Record a task start
     pub fn record_task_start(&self) {
-        self.inner.record_task_start();
+        #[cfg(feature = "metrics")]
+        {
+            self.inner.record_task_start();
+        }
     }
 
     /// Get the current total server count
     pub fn get_server_count(&self) -> usize {
-        self.inner.get_server_count()
+        #[cfg(feature = "metrics")]
+        {
+            self.inner.get_server_count()
+        }
+        #[cfg(not(feature = "metrics"))]
+        {
+            0
+        }
     }
 
     /// Get the current server count for a specific collection
     pub fn get_collection_server_count(&self, collection: &str, database: &str) -> usize {
-        self.inner.get_collection_server_count(collection, database)
+        #[cfg(feature = "metrics")]
+        {
+            self.inner.get_collection_server_count(collection, database)
+        }
+        #[cfg(not(feature = "metrics"))]
+        {
+            let _ = (collection, database); // Suppress unused parameter warnings
+            0
+        }
     }
 
     /// Export metrics in Prometheus format
-    pub fn export(&self) -> Result<String, prometheus::Error> {
-        self.inner.export()
+    pub fn export(&self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        #[cfg(feature = "metrics")]
+        {
+            self.inner.export().map_err(|e| e.into())
+        }
+        #[cfg(not(feature = "metrics"))]
+        {
+            Ok(String::new())
+        }
     }
 
     /// Get the registry for use with axum-prometheus
     /// Returns None if metrics are disabled (dummy mode)
     pub fn registry(&self) -> Option<Arc<Registry>> {
-        self.inner.registry()
-    }
-}
-
-#[cfg(not(feature = "metrics"))]
-impl Metrics {
-    /// Create a new metrics collector (no-op when metrics feature is disabled)
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    /// Create a dummy metrics collector (no-op when metrics feature is disabled)
-    pub fn dummy() -> Self {
-        Self {}
-    }
-
-    /// Increment the total server count (no-op when metrics feature is disabled)
-    pub fn increment_servers(&self) {}
-
-    /// Decrement the total server count (no-op when metrics feature is disabled)
-    pub fn decrement_servers(&self) {}
-
-    /// Set the total server count (no-op when metrics feature is disabled)
-    pub fn set_server_count(&self, _count: usize) {}
-
-    /// Increment the server count for a specific collection (no-op when metrics feature is disabled)
-    pub fn increment_collection_server(&self, _collection: &str, _database: &str) {}
-
-    /// Decrement the server count for a specific collection (no-op when metrics feature is disabled)
-    pub fn decrement_collection_server(&self, _collection: &str, _database: &str) {}
-
-    /// Set the server count for a specific collection (no-op when metrics feature is disabled)
-    pub fn set_collection_server_count(&self, _collection: &str, _database: &str, _count: usize) {}
-
-    /// Record a task restart (no-op when metrics feature is disabled)
-    pub fn record_task_restart(&self, _collection: &str, _database: &str, _reason: &str) {}
-
-    /// Record a task failure (no-op when metrics feature is disabled)
-    pub fn record_task_failure(&self, _collection: &str, _database: &str, _error_type: &str) {}
-
-    /// Record a task start (no-op when metrics feature is disabled)
-    pub fn record_task_start(&self) {}
-
-    /// Get the current total server count (always returns 0 when metrics feature is disabled)
-    pub fn get_server_count(&self) -> usize {
-        0
-    }
-
-    /// Get the current server count for a specific collection (always returns 0 when metrics feature is disabled)
-    pub fn get_collection_server_count(&self, _collection: &str, _database: &str) -> usize {
-        0
-    }
-
-    /// Export metrics in Prometheus format (returns empty string when metrics feature is disabled)
-    pub fn export(&self) -> Result<String, String> {
-        Ok(String::new())
-    }
-
-    /// Get the registry for use with axum-prometheus (always returns None when metrics feature is disabled)
-    pub fn registry(&self) -> Option<()> {
-        None
+        #[cfg(feature = "metrics")]
+        {
+            self.inner.registry()
+        }
+        #[cfg(not(feature = "metrics"))]
+        {
+            None
+        }
     }
 }
 
