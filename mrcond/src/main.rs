@@ -10,6 +10,9 @@ use tracing::info;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
+const HEALTH_ENDPOINT: &str = "/health";
+const METRICS_ENDPOINT: &str = "/metrics";
+
 /// MongoDB-RabbitMQ Connector Daemon
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -68,11 +71,11 @@ async fn main() -> Result<()> {
 
         #[cfg(feature = "metrics")]
         let app = Router::new()
-            .route("/health", get(health))
-            .route("/metrics", get(metrics_handler));
+            .route(HEALTH_ENDPOINT, get(health))
+            .route(METRICS_ENDPOINT, get(metrics_handler));
 
         #[cfg(not(feature = "metrics"))]
-        let app = Router::new().route("/health", get(health));
+        let app = Router::new().route(HEALTH_ENDPOINT, get(health));
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
         axum::serve(listener, app).await
     });
