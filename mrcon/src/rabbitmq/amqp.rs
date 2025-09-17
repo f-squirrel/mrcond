@@ -11,6 +11,8 @@ use mongodb::{bson::Document, change_stream::event::ChangeStreamEvent};
 use serde_json;
 use tracing::trace;
 
+const DEFAULT_EXCHANGE: &str = "";
+
 /// RabbitMQ publisher for MongoDB change events.
 ///
 /// The `Publisher` encapsulates a RabbitMQ channel and configuration, providing methods to declare queues
@@ -39,7 +41,7 @@ impl Publisher {
         let channel = conn.create_channel().await?;
         channel
             .queue_declare(
-                &config.stream_name,
+                &config.queue_name,
                 Default::default(),
                 FieldTable::default(),
             )
@@ -73,7 +75,7 @@ impl Publisher {
         let channel = connection.create_channel().await?;
         channel
             .queue_declare(
-                &config.stream_name,
+                &config.queue_name,
                 Default::default(),
                 FieldTable::default(),
             )
@@ -94,18 +96,23 @@ impl Publisher {
     /// Returns an error if serialization or publishing fails.
     pub async fn publish(&self, event: &ChangeStreamEvent<Document>) -> Result<(), Error> {
         let payload = serde_json::to_vec(event)?;
+        let exchange = self
+            .config
+            .exchange_name
+            .as_ref()
+            .map_or(DEFAULT_EXCHANGE, |f| f.as_str());
         let confirm: Confirmation = self
             .channel
             .basic_publish(
-                "",
-                &self.config.stream_name,
+                exchange,
+                &self.config.queue_name,
                 BasicPublishOptions::default(),
                 &payload,
                 BasicProperties::default(),
             )
             .await?
             .await?;
-        trace!(queue = %self.config.stream_name, "Published message to RabbitMQ, payload: {}, confirmation: {:?}", serde_json::to_string(event)?, confirm);
+        trace!(queue = %self.config.queue_name, "Published message to RabbitMQ, payload: {}, confirmation: {:?}", serde_json::to_string(event)?, confirm);
         Ok(())
     }
 }
