@@ -38,19 +38,7 @@ impl Publisher {
     /// Returns an error if the connection, channel, or queue declaration fails.
     pub async fn new(config: &RabbitMq, rabbitmq_uri: &str) -> Result<Self, Error> {
         let conn = Connection::connect(rabbitmq_uri, ConnectionProperties::default()).await?;
-        let channel = conn.create_channel().await?;
-        channel
-            .queue_declare(
-                &config.queue_name,
-                Default::default(),
-                FieldTable::default(),
-            )
-            .await?;
-        Ok(Self {
-            config: config.clone(),
-            channel,
-            _connection: Arc::new(conn),
-        })
+        Self::init(config.clone(), Arc::new(conn)).await
     }
 
     /// Create a new `Publisher` using an existing RabbitMQ connection.
@@ -72,6 +60,21 @@ impl Publisher {
         config: RabbitMq,
         connection: Arc<Connection>,
     ) -> Result<Self, Error> {
+        Self::init(config, connection).await
+    }
+
+    /// Initialize a new `Publisher` with the given configuration and connection.
+    ///
+    /// This private method contains the common initialization logic for both `new` and `with_connection`.
+    /// It creates a channel from the connection and declares the target queue.
+    ///
+    /// # Arguments
+    /// * `config` - RabbitMQ configuration (queue/stream name, etc).
+    /// * `connection` - An Arc-wrapped RabbitMQ `Connection`.
+    ///
+    /// # Errors
+    /// Returns an error if the channel creation or queue declaration fails.
+    async fn init(config: RabbitMq, connection: Arc<Connection>) -> Result<Self, Error> {
         let channel = connection.create_channel().await?;
         channel
             .queue_declare(
