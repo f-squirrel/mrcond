@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::error::Error;
 use super::publish::Publish;
-use crate::config::RabbitMq;
+use crate::config::{Exchange, RabbitMq};
 use lapin::{
     BasicProperties, Channel, Connection, ConnectionProperties, options::BasicPublishOptions,
     publisher_confirm::Confirmation, types::FieldTable,
@@ -10,8 +10,6 @@ use lapin::{
 use mongodb::{bson::Document, change_stream::event::ChangeStreamEvent};
 use serde_json;
 use tracing::trace;
-
-const DEFAULT_EXCHANGE: &str = "";
 
 /// RabbitMQ publisher for MongoDB change events.
 ///
@@ -66,16 +64,39 @@ impl Publisher {
     /// Initialize a new `Publisher` with the given configuration and connection.
     ///
     /// This private method contains the common initialization logic for both `new` and `with_connection`.
-    /// It creates a channel from the connection and declares the target queue.
+    /// It creates a channel from the connection, declares the exchange (if specified), and declares the target queue.
     ///
     /// # Arguments
     /// * `config` - RabbitMQ configuration (queue/stream name, etc).
     /// * `connection` - An Arc-wrapped RabbitMQ `Connection`.
     ///
     /// # Errors
-    /// Returns an error if the channel creation or queue declaration fails.
+    /// Returns an error if the channel creation, exchange declaration, or queue declaration fails.
     async fn init(config: RabbitMq, connection: Arc<Connection>) -> Result<Self, Error> {
         let channel = connection.create_channel().await?;
+
+        if config.exchange != Exchange::default() {
+            // Declare exchange if exchange_name is specified
+            channel
+                .exchange_declare(
+                    &config.exchange.name,
+                    config.exchange.kind.clone().into(),
+                    config.exchange.declare_options.clone().into(),
+                    FieldTable::default(),
+                )
+                .await?;
+
+            channel
+                .queue_bind(
+                    &config.queue_name,
+                    &config.exchange.name,
+                    &config.queue_name,
+                    Default::default(),
+                    FieldTable::default(),
+                )
+                .await?;
+        }
+
         channel
             .queue_declare(
                 &config.queue_name,
@@ -99,15 +120,10 @@ impl Publisher {
     /// Returns an error if serialization or publishing fails.
     pub async fn publish(&self, event: &ChangeStreamEvent<Document>) -> Result<(), Error> {
         let payload = serde_json::to_vec(event)?;
-        let exchange = self
-            .config
-            .exchange_name
-            .as_ref()
-            .map_or(DEFAULT_EXCHANGE, |f| f.as_str());
         let confirm: Confirmation = self
             .channel
             .basic_publish(
-                exchange,
+                self.config.exchange.name.as_str(),
                 &self.config.queue_name,
                 BasicPublishOptions::default(),
                 &payload,
