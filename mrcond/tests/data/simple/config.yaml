@@ -10,5 +10,6 @@ collections:
       tokens_coll_size_in_bytes: 1048576
     rabbitmq:
       queue_name: "testqueue"
-      exchange: ""
+      # exchange: ""
+      exchange_name: "testexchange"
 

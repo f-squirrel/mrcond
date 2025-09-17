@@ -18,7 +18,67 @@ pub struct ResumeTokensDB {
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
 pub struct RabbitMq {
     pub exchange_name: Option<String>,
+    #[serde(default)]
+    pub exchange: Exchange,
     pub queue_name: String,
+}
+
+#[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
+pub struct Exchange {
+    pub name: String,
+    #[serde(flatten, default)]
+    pub kind: ExchangeKind,
+    #[serde(default)]
+    pub declare_options: ExchangeDeclareOptions,
+}
+
+#[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
+#[serde(tag = "type", content = "custom_type", rename_all = "snake_case")]
+pub enum ExchangeKind {
+    Custom(String),
+    Direct,
+    Fanout,
+    Headers,
+    Topic,
+}
+
+impl Default for ExchangeKind {
+    fn default() -> Self {
+        Self::Direct
+    }
+}
+
+impl From<ExchangeKind> for lapin::ExchangeKind {
+    fn from(kind: ExchangeKind) -> Self {
+        match kind {
+            ExchangeKind::Custom(custom_type) => lapin::ExchangeKind::Custom(custom_type),
+            ExchangeKind::Direct => lapin::ExchangeKind::Direct,
+            ExchangeKind::Fanout => lapin::ExchangeKind::Fanout,
+            ExchangeKind::Headers => lapin::ExchangeKind::Headers,
+            ExchangeKind::Topic => lapin::ExchangeKind::Topic,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
+pub struct ExchangeDeclareOptions {
+    pub passive: bool,
+    pub durable: bool,
+    pub auto_delete: bool,
+    pub internal: bool,
+    pub nowait: bool,
+}
+
+impl From<ExchangeDeclareOptions> for lapin::options::ExchangeDeclareOptions {
+    fn from(options: ExchangeDeclareOptions) -> Self {
+        Self {
+            passive: options.passive,
+            durable: options.durable,
+            auto_delete: options.auto_delete,
+            internal: options.internal,
+            nowait: options.nowait,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
