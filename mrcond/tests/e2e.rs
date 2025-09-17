@@ -301,7 +301,7 @@ async fn create_pubsub(settings: &Settings) -> (Client, Producer, Consumer) {
     let producer = Producer::new(client.clone(), &settings.collections()[0]).await;
     let consumer = Consumer::new(
         &settings.connections().rabbitmq_uri,
-        &settings.collections()[0].rabbitmq.stream_name,
+        &settings.collections()[0].rabbitmq.queue_name,
     )
     .await
     .unwrap();

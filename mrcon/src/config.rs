@@ -17,7 +17,8 @@ pub struct ResumeTokensDB {
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
 pub struct RabbitMq {
-    pub stream_name: String,
+    pub exchange_name: Option<String>,
+    pub queue_name: String,
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
