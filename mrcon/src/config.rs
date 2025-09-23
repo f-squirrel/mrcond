@@ -17,7 +17,6 @@ pub struct ResumeTokensDB {
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
 pub struct RabbitMq {
-    pub exchange_name: Option<String>,
     #[serde(default)]
     pub exchange: Exchange,
     pub queue_name: String,
