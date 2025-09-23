@@ -30,3 +30,5 @@ reqwest = { version = "0" }
 prometheus = "0"
 axum-prometheus = "0"
 bollard = "0"
+rstest = "0.26.1"
+serial_test = "3.2.0"

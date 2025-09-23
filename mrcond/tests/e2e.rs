@@ -1,4 +1,5 @@
 use futures_util::stream::StreamExt;
+use rstest::rstest;
 use std::io::{BufRead, BufReader};
 use std::process::{Child, Command, Stdio};
 use std::thread;
@@ -337,15 +338,20 @@ async fn wait_for_metrics() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn test() {
+#[rstest]
+#[serial_test::serial]
+#[case("tests/data/simple/config.yaml", "tests/data/simple/connections.yaml")]
+#[serial_test::serial]
+#[case(
+    "tests/data/simple/custom_exchange.yaml",
+    "tests/data/simple/connections.yaml"
+)]
+async fn test_default_config(#[case] config: &str, #[case] connections: &str) {
     let mut cluster = Cluster::start();
 
     wait_for_metrics().await;
 
-    let settings = load_settings(
-        "tests/data/simple/config.yaml",
-        "tests/data/simple/connections.yaml",
-    );
+    let settings = load_settings(config, connections);
 
     let input = load_input_data("tests/data/simple/input.json");
 
