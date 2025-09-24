@@ -12,5 +12,4 @@ collections:
       queue:
         name: "testqueue"
       # exchange: ""
-      exchange_name: "testexchange"
 
