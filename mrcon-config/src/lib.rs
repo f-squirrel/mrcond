@@ -126,6 +126,14 @@ impl From<QueueDeclareOptions> for lapin::options::QueueDeclareOptions {
     }
 }
 
+impl From<QueueBindOptions> for lapin::options::QueueBindOptions {
+    fn from(options: QueueBindOptions) -> Self {
+        Self {
+            nowait: options.nowait,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct Collection {
