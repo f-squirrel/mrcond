@@ -18,6 +18,7 @@ use tracing::trace;
 pub struct Publisher {
     config: RabbitMq,
     channel: Channel,
+    routing_key: String,
     // DD: to hold a connection while the channel is alive
     _connection: Arc<Connection>,
 }
@@ -74,6 +75,11 @@ impl Publisher {
     async fn init(config: RabbitMq, connection: Arc<Connection>) -> Result<Self, Error> {
         let channel = connection.create_channel().await?;
 
+        let routing_key = config
+            .routing_key
+            .clone()
+            .unwrap_or_else(|| config.queue_name.clone());
+
         if config.exchange != Exchange::default() {
             // Declare exchange if exchange_name is specified
             channel
@@ -87,9 +93,9 @@ impl Publisher {
 
             channel
                 .queue_bind(
-                    &config.queue_name,
+                    &config.queue.name,
                     &config.exchange.name,
-                    &config.queue_name,
+                    routing_key.as_str(),
                     Default::default(),
                     FieldTable::default(),
                 )
@@ -98,14 +104,15 @@ impl Publisher {
 
         channel
             .queue_declare(
-                &config.queue_name,
-                Default::default(),
+                &config.queue.name,
+                config.queue.declare_options.clone().into(),
                 FieldTable::default(),
             )
             .await?;
         Ok(Self {
             config,
             channel,
+            routing_key,
             _connection: connection,
         })
     }
@@ -123,7 +130,7 @@ impl Publisher {
             .channel
             .basic_publish(
                 self.config.exchange.name.as_str(),
-                &self.config.queue_name,
+                self.routing_key.as_str(),
                 BasicPublishOptions::default(),
                 &payload,
                 BasicProperties::default(),
