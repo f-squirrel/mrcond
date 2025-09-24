@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use lapin::{
-    BasicProperties, Channel, Connection, ConnectionProperties, options::BasicPublishOptions,
-    publisher_confirm::Confirmation, types::FieldTable,
+    BasicProperties, Channel, Connection, ConnectionProperties, publisher_confirm::Confirmation,
+    types::FieldTable,
 };
 use mongodb::{bson::Document, change_stream::event::ChangeStreamEvent};
 use mrcon_config::{Exchange, RabbitMq};
@@ -131,7 +131,7 @@ impl Publisher {
             .basic_publish(
                 self.config.exchange.name.as_str(),
                 self.routing_key.as_str(),
-                BasicPublishOptions::default(),
+                self.config.queue.basic_publish_options.clone().into(),
                 &payload,
                 BasicProperties::default(),
             )
