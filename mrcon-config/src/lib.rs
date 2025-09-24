@@ -35,6 +35,8 @@ pub struct Queue {
     pub bind_options: QueueBindOptions,
     #[serde(default)]
     pub declare_options: QueueDeclareOptions,
+    #[serde(default)]
+    pub basic_publish_options: BasicPublishOptions,
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
@@ -51,6 +53,13 @@ pub struct QueueDeclareOptions {
     pub exclusive: bool,
     pub auto_delete: bool,
     pub nowait: bool,
+}
+
+#[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
+#[non_exhaustive]
+pub struct BasicPublishOptions {
+    pub mandatory: bool,
+    pub immediate: bool,
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
@@ -130,6 +139,15 @@ impl From<QueueBindOptions> for lapin::options::QueueBindOptions {
     fn from(options: QueueBindOptions) -> Self {
         Self {
             nowait: options.nowait,
+        }
+    }
+}
+
+impl From<BasicPublishOptions> for lapin::options::BasicPublishOptions {
+    fn from(options: BasicPublishOptions) -> Self {
+        Self {
+            mandatory: options.mandatory,
+            immediate: options.immediate,
         }
     }
 }
