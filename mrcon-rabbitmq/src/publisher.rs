@@ -85,7 +85,7 @@ impl Publisher {
                 .exchange_declare(
                     &config.exchange.name,
                     config.exchange.kind.clone().into(),
-                    config.exchange.declare_options.clone().into(),
+                    config.exchange.declare_options.into(),
                     FieldTable::default(),
                 )
                 .await?;
@@ -95,7 +95,7 @@ impl Publisher {
                     &config.queue.name,
                     &config.exchange.name,
                     &routing_key,
-                    config.queue.bind_options.clone().into(),
+                    config.queue.bind_options.into(),
                     FieldTable::default(),
                 )
                 .await?;
@@ -104,7 +104,7 @@ impl Publisher {
         channel
             .queue_declare(
                 &config.queue.name,
-                config.queue.declare_options.clone().into(),
+                config.queue.declare_options.into(),
                 FieldTable::default(),
             )
             .await?;
@@ -130,7 +130,7 @@ impl Publisher {
             .basic_publish(
                 self.config.exchange.name.as_str(),
                 self.routing_key.as_str(),
-                self.config.queue.basic_publish_options.clone().into(),
+                self.config.queue.basic_publish_options.into(),
                 &payload,
                 self.config.queue.basic_properties.clone().into(),
             )
