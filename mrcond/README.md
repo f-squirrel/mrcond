@@ -42,37 +42,123 @@ Options:
 
 ## Configuration
 
-### MongoDB collection and rabbitmq stream settings config file
+The daemon is configured via YAML files that specify which MongoDB collections to watch and how to forward their change events to RabbitMQ.
 
-Example:
+### Simple Configuration
+
+For basic use cases with default settings:
 
 ```yaml
 collections:
   - watched:
-      db_name: "test"
-      coll_name: "testcoll"
+      db_name: "myapp"
+      coll_name: "users"
       change_stream_pre_and_post_images: false
     resume_tokens:
-      tokens_db_name: "test"
+      tokens_db_name: "myapp"
       tokens_coll_name: "resume_tokens"
       tokens_coll_capped: true
       tokens_coll_size_in_bytes: 1048576
     rabbitmq:
-      stream_name: "testqueue"
+      queue:
+        name: "user_changes"
 ```
+
+### Advanced Configuration
+
+For production environments with custom exchange, queue settings, and message properties:
+
+```yaml
+collections:
+  - watched:
+      db_name: "myapp"
+      coll_name: "users"
+      change_stream_pre_and_post_images: true
+    resume_tokens:
+      tokens_db_name: "myapp"
+      tokens_coll_name: "resume_tokens"
+      tokens_coll_capped: true
+      tokens_coll_size_in_bytes: 10485760  # 10MB
+    rabbitmq:
+      exchange:
+        name: "myapp_events"
+        type: "topic"
+        declare_options:
+          durable: true
+          auto_delete: false
+      queue:
+        name: "testqueue"
+        bind_options:
+          nowait: false
+        declare_options:
+          passive: false
+          durable: false
+          exclusive: false
+          auto_delete: false
+          nowait: false
+        basic_publish_options:
+          mandatory: false
+          immediate: false
+        basic_properties:
+          persistent: false
+          content_type: "application/json"
+          content_encoding: "utf-8"
+          priority: 0
+          correlation_id: ""
+          reply_to: ""
+          expiration: ""
+          message_id: ""
+          timestamp: 0
+          user_id: ""
+          app_id: ""
+          cluster_id: ""
+      routing_key: "test_routing_key"
+```
+
+### Configuration Reference
 
 - **collections**: List of collections to watch and forward to RabbitMQ.
   - **watched**: MongoDB collection to watch.
     - `db_name`: Database name.
     - `coll_name`: Collection name.
-    - `change_stream_pre_and_post_images`: Enable pre/post images (bool).
+    - `change_stream_pre_and_post_images`: Enable pre/post images for updates (bool).
   - **resume_tokens**: Where to store resume tokens for reliable streaming.
     - `tokens_db_name`: Database for tokens.
     - `tokens_coll_name`: Collection for tokens.
     - `tokens_coll_capped`: Use capped collection (bool).
-    - `tokens_coll_size_in_bytes`: Size for capped collection.
-  - **rabbitmq**: Target RabbitMQ queue/stream.
-    - `stream_name`: Queue/stream name.
+    - `tokens_coll_size_in_bytes`: Size for capped collection in bytes.
+  - **rabbitmq**: Target RabbitMQ configuration.
+    - **exchange** (optional): Exchange configuration.
+      - `name`: Exchange name.
+      - `type`: Exchange type (`direct`, `topic`, `fanout`, `headers`).
+      - **declare_options**: Exchange declaration options (all optional, default false).
+        - `durable`: Survive broker restart.
+        - `auto_delete`: Delete when no queues bound.
+        - `internal`: Internal exchange.
+    - **queue**: Queue configuration.
+      - `name`: Queue name.
+      - **declare_options**: Queue declaration options (all optional, default false).
+        - `durable`: Survive broker restart.
+        - `exclusive`: Only accessible by this connection.
+        - `auto_delete`: Delete when no consumers.
+      - **bind_options**: Queue binding options (optional).
+        - `nowait`: Don't wait for bind confirmation.
+      - **basic_publish_options**: Publishing options (optional).
+        - `mandatory`: Return message if unroutable.
+        - `immediate`: Return message if no consumers.
+      - **basic_properties**: Message properties (all optional).
+        - `content_type`: MIME type (e.g., "application/json").
+        - `content_encoding`: Content encoding (e.g., "gzip", "utf-8").
+        - `delivery_mode`: 1 (transient) or 2 (persistent).
+        - `priority`: Message priority (0-9).
+        - `correlation_id`: For request-response patterns.
+        - `reply_to`: Reply queue name.
+        - `expiration`: Message TTL in milliseconds.
+        - `message_id`: Unique message identifier.
+        - `timestamp`: Message timestamp (Unix timestamp).
+        - `user_id`: User identifier.
+        - `app_id`: Application identifier.
+    - `routing_key` (optional): Routing key for exchange routing.
 
 ### Environment Variables
 
