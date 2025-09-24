@@ -1,0 +1,15 @@
+[package]
+name = "mrcon-config"
+version = "0.1.0"
+description = "Configuration types for mrcon MongoDB to RabbitMQ connector"
+
+authors.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde.workspace = true
+lapin.workspace = true

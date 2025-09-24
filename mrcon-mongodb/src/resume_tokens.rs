@@ -1,5 +1,5 @@
-use crate::config;
 use mongodb::{Client, Collection, bson::doc, change_stream::event::ResumeToken};
+use mrcon_config;
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
@@ -31,7 +31,7 @@ impl ResumeTokensDB {
     /// Returns an error if the collection cannot be created or accessed.
     pub async fn new(
         client: Client,
-        config: config::ResumeTokensDB,
+        config: mrcon_config::ResumeTokensDB,
     ) -> mongodb::error::Result<Self> {
         let db = client.database(&config.tokens_db_name);
         let collection = db.collection::<ResumeTokenDbView>(&config.tokens_coll_name);

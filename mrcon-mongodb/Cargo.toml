@@ -1,7 +1,7 @@
 [package]
-name = "mrcon"
+name = "mrcon-mongodb"
 version = "0.1.0"
-description = "MongoDB to RabbitMQ connector library for streaming change events"
+description = "MongoDB functionality for mrcon MongoDB to RabbitMQ connector"
 
 authors.workspace = true
 edition.workspace = true
@@ -10,22 +10,12 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
-[features]
-default = ["metrics"]
-metrics = ["dep:prometheus"]
-
 [dependencies]
 mrcon-core = { path = "../mrcon-core" }
 mrcon-config = { path = "../mrcon-config" }
-mrcon-rabbitmq = { path = "../mrcon-rabbitmq" }
-mrcon-mongodb = { path = "../mrcon-mongodb" }
 mongodb.workspace = true
-lapin.workspace = true
 futures-util.workspace = true
-serde_json.workspace = true
-tokio.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 tracing.workspace = true
 thiserror.workspace = true
-async-trait.workspace = true
-prometheus = { workspace = true, optional = true }

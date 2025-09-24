@@ -2,8 +2,12 @@
 
 use std::{sync::Arc, time::Duration};
 
-use crate::{config::Settings, metrics::Metrics, rabbitmq};
+use crate::metrics::Metrics;
 use mongodb::Client;
+use mrcon_config::{Collection, Settings};
+use mrcon_core::Error as CoreError;
+use mrcon_mongodb::Connector;
+use mrcon_rabbitmq::Publisher;
 use thiserror::Error;
 use tracing::{error, info, warn};
 
@@ -12,8 +16,8 @@ pub enum Error {
     #[error("Connector error in collection '{collection:?}': {source}")]
     Connector {
         #[source]
-        source: crate::mongo::connector::Error,
-        collection: Option<crate::config::Collection>,
+        source: CoreError,
+        collection: Option<Collection>,
     },
 }
 
@@ -96,7 +100,7 @@ impl Server {
         )
         .await
         .map_err(|e: mongodb::error::Error| Error::Connector {
-            source: crate::mongo::connector::Error::Mongo(e),
+            source: CoreError::MongoDB(e),
             collection: None,
         })
     }
@@ -115,7 +119,7 @@ impl Server {
         )
         .await
         .map_err(|e| Error::Connector {
-            source: crate::mongo::connector::Error::RabbitMq(e.into()),
+            source: CoreError::RabbitMq(e),
             collection: None,
         })?;
 
@@ -136,15 +140,41 @@ impl Server {
     }
 
     async fn spawn_task(
-        collection: crate::config::Collection,
+        collection: Collection,
         mongo_client: mongodb::Client,
         rabbitmq_client: Arc<lapin::Connection>,
     ) -> Result<(), Error> {
         let coll_name = collection.watched.coll_name.clone();
-        let connector = crate::mongo::connector::Connector::with_clients(
+
+        // Create the resume tokens DB
+        let resume_tokens = mrcon_mongodb::ResumeTokensDB::new(
             mongo_client.clone(),
-            rabbitmq_client.clone(),
-            &collection,
+            collection.resume_tokens.clone()
+        ).await.map_err(|e| {
+            tracing::error!(error = ?e, collection = %coll_name, "Failed to create resume tokens DB");
+            Error::Connector {
+                source: CoreError::MongoDB(e),
+                collection: Some(collection.clone()),
+            }
+        })?;
+
+        // Create the RabbitMQ publisher
+        let publisher = Publisher::with_connection(collection.rabbitmq.clone(), rabbitmq_client)
+            .await
+            .map_err(|e| {
+                tracing::error!(error = ?e, collection = %coll_name, "Failed to create publisher");
+                Error::Connector {
+                    source: e,
+                    collection: Some(collection.clone()),
+                }
+            })?;
+
+        // Create the connector
+        let connector = Connector::new(
+            mongo_client.clone(),
+            collection.watched.clone(),
+            resume_tokens,
+            Arc::new(publisher),
         )
         .await
         .map_err(|e| {
@@ -213,12 +243,12 @@ impl Server {
 
                         // Record the failure and restart reason
                         let (error_type, restart_reason) = match &source {
-                            crate::mongo::connector::Error::Mongo(_) => {
+                            CoreError::MongoDB(_) => {
                                 info!("Restarting mongo client");
                                 mongo_client = Self::connect_to_mongo(&self.settings).await?;
                                 ("mongo_error", "mongo_connection_failed")
                             }
-                            crate::mongo::connector::Error::RabbitMq(rabbitmq::Error::Lapin(_)) => {
+                            CoreError::RabbitMq(_) => {
                                 info!("Restarting RabbitMQ client");
                                 rabbitmq_client = Self::connect_to_rabbitmq(&self.settings).await?;
                                 ("rabbitmq_error", "rabbitmq_connection_failed")
