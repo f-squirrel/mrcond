@@ -41,13 +41,13 @@ pub struct Queue {
     pub basic_properties: BasicProperties,
 }
 
-#[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
+#[derive(Debug, Deserialize, Clone, Copy, Hash, Eq, PartialEq, Default)]
 #[non_exhaustive]
 pub struct QueueBindOptions {
     pub nowait: bool,
 }
 
-#[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
+#[derive(Debug, Deserialize, Clone, Copy, Hash, Eq, PartialEq, Default)]
 #[non_exhaustive]
 pub struct QueueDeclareOptions {
     pub passive: bool,
@@ -57,7 +57,7 @@ pub struct QueueDeclareOptions {
     pub nowait: bool,
 }
 
-#[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
+#[derive(Debug, Deserialize, Clone, Copy, Hash, Eq, PartialEq, Default)]
 #[non_exhaustive]
 pub struct BasicPublishOptions {
     pub mandatory: bool,
@@ -120,7 +120,7 @@ impl From<ExchangeKind> for lapin::ExchangeKind {
     }
 }
 
-#[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
+#[derive(Debug, Deserialize, Clone, Copy, Hash, Eq, PartialEq, Default)]
 #[non_exhaustive]
 pub struct ExchangeDeclareOptions {
     pub passive: bool,
