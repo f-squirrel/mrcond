@@ -10,6 +10,6 @@ collections:
       tokens_coll_capped: true
       tokens_coll_size_in_bytes: 1048576
     rabbitmq:
-      queue_name: "testqueue"
+      queue:
+        name: "testqueue"
       # exchange_name: ""
-      exchange_name: "testexchange"

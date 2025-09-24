@@ -77,7 +77,7 @@ impl Publisher {
         let routing_key = config
             .routing_key
             .clone()
-            .unwrap_or_else(|| config.queue_name.clone());
+            .unwrap_or_else(|| config.queue.name.clone());
 
         if config.exchange != Exchange::default() {
             // Declare exchange if exchange_name is specified
@@ -136,7 +136,7 @@ impl Publisher {
             )
             .await?
             .await?;
-        trace!(queue = %self.config.queue_name, "Published message to RabbitMQ, payload: {}, confirmation: {:?}", serde_json::to_string(event)?, confirm);
+        trace!(queue = %self.config.queue.name, "Published message to RabbitMQ, payload: {}, confirmation: {:?}", serde_json::to_string(event)?, confirm);
         Ok(())
     }
 }
