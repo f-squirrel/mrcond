@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
+#[non_exhaustive]
 pub struct WatchedDb {
     pub db_name: String,
     pub coll_name: String,
@@ -8,6 +9,7 @@ pub struct WatchedDb {
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
+#[non_exhaustive]
 pub struct ResumeTokensDB {
     pub tokens_db_name: String,
     pub tokens_coll_name: String,
@@ -16,6 +18,7 @@ pub struct ResumeTokensDB {
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
+#[non_exhaustive]
 pub struct RabbitMq {
     #[serde(default)]
     pub exchange: Exchange,
@@ -23,6 +26,7 @@ pub struct RabbitMq {
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
+#[non_exhaustive]
 pub struct Exchange {
     pub name: String,
     #[serde(flatten, default)]
@@ -33,6 +37,7 @@ pub struct Exchange {
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
 #[serde(tag = "type", content = "custom_type", rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum ExchangeKind {
     Custom(String),
     Direct,
@@ -60,6 +65,7 @@ impl From<ExchangeKind> for lapin::ExchangeKind {
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
+#[non_exhaustive]
 pub struct ExchangeDeclareOptions {
     pub passive: bool,
     pub durable: bool,
@@ -81,6 +87,7 @@ impl From<ExchangeDeclareOptions> for lapin::options::ExchangeDeclareOptions {
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
+#[non_exhaustive]
 pub struct Collection {
     pub watched: WatchedDb,
     pub resume_tokens: ResumeTokensDB,
@@ -88,12 +95,14 @@ pub struct Collection {
 }
 
 #[derive(Default, Deserialize, Clone)]
+#[non_exhaustive]
 pub struct Connections {
     pub mongo_uri: String,
     pub rabbitmq_uri: String,
 }
 
 #[derive(Deserialize, Clone)]
+#[non_exhaustive]
 pub struct Settings {
     #[serde(skip)]
     connections: Connections,
