@@ -37,6 +37,8 @@ pub struct Queue {
     pub declare_options: QueueDeclareOptions,
     #[serde(default)]
     pub basic_publish_options: BasicPublishOptions,
+    #[serde(default)]
+    pub basic_properties: BasicProperties,
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
@@ -60,6 +62,23 @@ pub struct QueueDeclareOptions {
 pub struct BasicPublishOptions {
     pub mandatory: bool,
     pub immediate: bool,
+}
+
+#[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
+#[non_exhaustive]
+pub struct BasicProperties {
+    pub content_type: Option<String>,
+    pub content_encoding: Option<String>,
+    pub delivery_mode: Option<u8>,
+    pub priority: Option<u8>,
+    pub correlation_id: Option<String>,
+    pub reply_to: Option<String>,
+    pub expiration: Option<String>,
+    pub message_id: Option<String>,
+    pub timestamp: Option<u64>,
+    pub type_field: Option<String>,
+    pub user_id: Option<String>,
+    pub app_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
@@ -149,6 +168,51 @@ impl From<BasicPublishOptions> for lapin::options::BasicPublishOptions {
             mandatory: options.mandatory,
             immediate: options.immediate,
         }
+    }
+}
+
+impl From<BasicProperties> for lapin::BasicProperties {
+    fn from(props: BasicProperties) -> Self {
+        let mut basic_props = Self::default();
+
+        if let Some(content_type) = props.content_type {
+            basic_props = basic_props.with_content_type(content_type.into());
+        }
+        if let Some(content_encoding) = props.content_encoding {
+            basic_props = basic_props.with_content_encoding(content_encoding.into());
+        }
+        if let Some(delivery_mode) = props.delivery_mode {
+            basic_props = basic_props.with_delivery_mode(delivery_mode);
+        }
+        if let Some(priority) = props.priority {
+            basic_props = basic_props.with_priority(priority);
+        }
+        if let Some(correlation_id) = props.correlation_id {
+            basic_props = basic_props.with_correlation_id(correlation_id.into());
+        }
+        if let Some(reply_to) = props.reply_to {
+            basic_props = basic_props.with_reply_to(reply_to.into());
+        }
+        if let Some(expiration) = props.expiration {
+            basic_props = basic_props.with_expiration(expiration.into());
+        }
+        if let Some(message_id) = props.message_id {
+            basic_props = basic_props.with_message_id(message_id.into());
+        }
+        if let Some(timestamp) = props.timestamp {
+            basic_props = basic_props.with_timestamp(timestamp);
+        }
+        if let Some(type_field) = props.type_field {
+            basic_props = basic_props.with_type(type_field.into());
+        }
+        if let Some(user_id) = props.user_id {
+            basic_props = basic_props.with_user_id(user_id.into());
+        }
+        if let Some(app_id) = props.app_id {
+            basic_props = basic_props.with_app_id(app_id.into());
+        }
+
+        basic_props
     }
 }
 
