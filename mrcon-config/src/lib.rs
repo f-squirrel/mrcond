@@ -23,6 +23,34 @@ pub struct RabbitMq {
     #[serde(default)]
     pub exchange: Exchange,
     pub queue_name: String,
+    pub routing_key: Option<String>,
+    pub queue: Queue,
+}
+
+#[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
+#[non_exhaustive]
+pub struct Queue {
+    pub name: String,
+    #[serde(default)]
+    pub bind_options: QueueBindOptions,
+    #[serde(default)]
+    pub declare_options: QueueDeclareOptions,
+}
+
+#[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
+#[non_exhaustive]
+pub struct QueueBindOptions {
+    pub nowait: bool,
+}
+
+#[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
+#[non_exhaustive]
+pub struct QueueDeclareOptions {
+    pub passive: bool,
+    pub durable: bool,
+    pub exclusive: bool,
+    pub auto_delete: bool,
+    pub nowait: bool,
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
@@ -81,6 +109,18 @@ impl From<ExchangeDeclareOptions> for lapin::options::ExchangeDeclareOptions {
             durable: options.durable,
             auto_delete: options.auto_delete,
             internal: options.internal,
+            nowait: options.nowait,
+        }
+    }
+}
+
+impl From<QueueDeclareOptions> for lapin::options::QueueDeclareOptions {
+    fn from(options: QueueDeclareOptions) -> Self {
+        Self {
+            passive: options.passive,
+            durable: options.durable,
+            exclusive: options.exclusive,
+            auto_delete: options.auto_delete,
             nowait: options.nowait,
         }
     }
