@@ -95,7 +95,7 @@ impl Publisher {
                 .queue_bind(
                     &config.queue.name,
                     &config.exchange.name,
-                    routing_key.as_str(),
+                    &routing_key,
                     config.queue.bind_options.clone().into(),
                     FieldTable::default(),
                 )
