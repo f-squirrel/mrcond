@@ -19,4 +19,5 @@ collections:
         auto_delete: false
         internal: false
         nowait: false
-    queue_name: testqueue
+      queue:
+        name: "testqueue"

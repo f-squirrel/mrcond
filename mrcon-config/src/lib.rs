@@ -22,7 +22,6 @@ pub struct ResumeTokensDB {
 pub struct RabbitMq {
     #[serde(default)]
     pub exchange: Exchange,
-    pub queue_name: String,
     pub routing_key: Option<String>,
     pub queue: Queue,
 }
