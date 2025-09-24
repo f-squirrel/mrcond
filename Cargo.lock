@@ -2306,11 +2306,61 @@ dependencies = [
  "futures-util",
  "lapin",
  "mongodb",
+ "mrcon-config",
+ "mrcon-core",
+ "mrcon-mongodb",
+ "mrcon-rabbitmq",
  "prometheus",
  "serde",
  "serde_json",
  "thiserror 2.0.12",
  "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "mrcon-config"
+version = "0.1.0"
+dependencies = [
+ "lapin",
+ "serde",
+]
+
+[[package]]
+name = "mrcon-core"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "lapin",
+ "mongodb",
+ "serde_json",
+ "thiserror 2.0.12",
+]
+
+[[package]]
+name = "mrcon-mongodb"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "mongodb",
+ "mrcon-config",
+ "mrcon-core",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.12",
+ "tracing",
+]
+
+[[package]]
+name = "mrcon-rabbitmq"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "lapin",
+ "mongodb",
+ "mrcon-config",
+ "mrcon-core",
+ "serde_json",
  "tracing",
 ]
 

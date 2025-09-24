@@ -1,91 +1,31 @@
 use std::sync::Arc;
 
-use crate::mongo::resume_tokens::ResumeTokensDB;
-use crate::rabbitmq::Publisher;
-use crate::{config::WatchedDb, rabbitmq::amqp};
+use crate::resume_tokens::ResumeTokensDB;
 use futures_util::stream::StreamExt;
 use mongodb::{Client, bson::Document};
-use thiserror::Error;
+use mrcon_config::WatchedDb;
+use mrcon_core::{Error, Publish};
 use tracing::{debug, error, info, warn};
-
-#[derive(Debug, Error)]
-pub enum Error {
-    #[error("MongoDB error: {0}")]
-    Mongo(#[from] mongodb::error::Error),
-    #[error("RabbitMq error: {0}")]
-    RabbitMq(#[from] crate::rabbitmq::Error),
-    #[error("Serde error: {0}")]
-    Serde(#[from] serde_json::Error),
-}
 
 /// Connector for streaming MongoDB change events to RabbitMQ with persistent resume tokens.
 ///
 /// The `Connector` encapsulates all state and logic required to watch a MongoDB collection for change events,
 /// publish those events to RabbitMQ, and persist resume tokens for reliable, resumable streaming. It is designed
 /// to be constructed per watched collection and manages its own MongoDB client, resume token storage, and publisher.
-pub struct Connector {
+pub struct Connector<P>
+where
+    P: Publish,
+{
     client: Client,
     watched: WatchedDb,
     resume_tokens: ResumeTokensDB,
-    publisher: Publisher,
+    publisher: Arc<P>,
 }
 
-impl Connector {
-    /// Constructs a new `Connector` for a watched MongoDB collection and RabbitMQ publisher.
-    ///
-    /// Initializes the MongoDB client, persistent resume token storage, and RabbitMQ publisher
-    /// for the specified collection configuration. Main entry point for setting up a connector
-    /// for a single collection, using the provided MongoDB and RabbitMQ URIs and collection settings.
-    ///
-    /// # Arguments
-    /// * `mongo_uri` - MongoDB connection string.
-    /// * `rabbitmq_uri` - RabbitMQ connection string.
-    /// * `settings` - Collection-specific configuration.
-    ///
-    /// # Errors
-    /// Returns an error if the MongoDB client, resume token storage, or RabbitMQ publisher cannot be initialized.
-    pub async fn from_collection(
-        mongo_uri: &str,
-        rabbitmq_uri: &str,
-        settings: &crate::config::Collection,
-    ) -> Result<Self, Error> {
-        let client = Client::with_uri_str(mongo_uri).await?;
-
-        let resume_tokens =
-            ResumeTokensDB::new(client.clone(), settings.resume_tokens.clone()).await?;
-
-        let amqp_publisher = amqp::Publisher::new(&settings.rabbitmq, rabbitmq_uri).await?;
-        let publisher = Publisher::new(Arc::new(amqp_publisher));
-
-        Self::new(client, settings.watched.clone(), resume_tokens, publisher).await
-    }
-
-    /// Constructs a new `Connector` using existing MongoDB and RabbitMQ clients.
-    ///
-    /// Preferred when you want to share a MongoDB or RabbitMQ connection between multiple connectors.
-    ///
-    /// # Arguments
-    /// * `client` - An existing MongoDB client.
-    /// * `rabbitmq_client` - An existing RabbitMQ connection (shared via Arc).
-    /// * `settings` - Collection-specific configuration.
-    ///
-    /// # Errors
-    /// Returns an error if resume token storage or publisher cannot be initialized.
-    pub async fn with_clients(
-        client: Client,
-        rabbitmq_client: Arc<lapin::Connection>,
-        settings: &crate::config::Collection,
-    ) -> Result<Self, Error> {
-        let resume_tokens =
-            ResumeTokensDB::new(client.clone(), settings.resume_tokens.clone()).await?;
-
-        let amqp_publisher =
-            amqp::Publisher::with_connection(settings.rabbitmq.clone(), rabbitmq_client).await?;
-        let publisher = Publisher::new(Arc::new(amqp_publisher));
-
-        Self::new(client, settings.watched.clone(), resume_tokens, publisher).await
-    }
-
+impl<P> Connector<P>
+where
+    P: Publish,
+{
     /// Creates a new `Connector` instance from its components.
     ///
     /// Lower-level constructor for advanced use cases, allowing direct injection of the MongoDB client,
@@ -103,7 +43,7 @@ impl Connector {
         client: Client,
         watched: WatchedDb,
         resume_tokens: ResumeTokensDB,
-        publisher: Publisher,
+        publisher: Arc<P>,
     ) -> Result<Self, Error> {
         Ok(Self {
             client,
@@ -158,7 +98,7 @@ impl Connector {
                     .await
                     .map_err(|e| {
                         error!(error = %e, "Failed to save resume token");
-                        e
+                        Error::MongoDB(e)
                     })?;
                 debug!("Saved resume token: {}", serde_json::to_string(&token)?);
             } else {
@@ -167,7 +107,7 @@ impl Connector {
         }
 
         warn!("Collection dropped, stopping watcher, dropping resume tokens");
-        self.resume_tokens.clean().await?;
+        self.resume_tokens.clean().await.map_err(Error::MongoDB)?;
 
         Ok(())
     }
