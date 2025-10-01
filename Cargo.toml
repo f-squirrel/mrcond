@@ -1,6 +1,13 @@
 [workspace]
 resolver = "2"
-members = ["mrcon", "core", "config", "rabbitmq", "mongodb", "mrcond"]
+members = [
+    "crates/mrcon",
+    "crates/core",
+    "crates/config",
+    "crates/rabbitmq",
+    "crates/mongodb",
+    "mrcond",
+]
 
 [workspace.package]
 license = "MIT"

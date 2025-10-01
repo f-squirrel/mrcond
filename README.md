@@ -10,13 +10,13 @@ This repository contains a production-ready system for streaming MongoDB change 
 
 ## Crates
 
-- [`mrcon`](./mrcon/README.md): Core library for MongoDB-to-RabbitMQ streaming, resume tokens, and connector logic.
+- [`mrcon`](./crates/mrcon/README.md): Core library for MongoDB-to-RabbitMQ streaming, resume tokens, and connector logic.
 - [`mrcond`](./mrcond/README.md): CLI daemon for running the connector as a supervised service, with healthcheck and Docker support.
 
 ## Quick Start
 
 1. See [`mrcond/README.md`](./mrcond/README.md) for CLI usage, configuration, and deployment instructions.
-2. See [`mrcon/README.md`](./mrcon/README.md) for library API documentation and integration details.
+2. See [`mrcon/README.md`](./crates/mrcon/README.md) for library API documentation and integration details.
 
 ## Development
 
