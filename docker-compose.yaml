@@ -50,7 +50,7 @@ services:
       MRCON_LOG: "mrcon=trace,mrcon=trace,lapin=debug"
 
     volumes:
-      - ./config.yaml:/app/config.yaml:ro
+      - ${MRCON_CONFIG_PATH:-./config.yaml}:/app/config.yaml:ro
       - ./target/debug/mrcond:/app/mrcond:ro
     ports:
       # - "8080:8080" # health check
