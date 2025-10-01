@@ -21,6 +21,7 @@ This repository contains a production-ready system for streaming MongoDB change 
 ## Development
 
 - Use the provided `Makefile` for building, testing, and running integration tests with Docker Compose.
+- To run with a custom config: `make run-with-config MRCON_CONFIG_PATH=path/to/config.yaml`
 - Each crate is self-documented; see their respective README files for details.
 
 ## License

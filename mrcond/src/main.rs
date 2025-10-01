@@ -48,6 +48,8 @@ async fn main() -> Result<()> {
     let settings = Settings::new(connections, settings.collections().to_owned())
         .map_err(|e| anyhow::anyhow!("Failed to create settings: {}", e))?;
 
+    tracing::trace!("Settings: {:?}", settings.collections());
+
     // Create shared metrics instance
     let metrics = Metrics::new();
     let metrics_for_server = metrics.clone();

@@ -18,7 +18,14 @@ struct Cluster {
 
 impl Cluster {
     fn start() -> Self {
-        println!("Starting docker-compose cluster...");
+        Self::start_with_config("./config.yaml")
+    }
+
+    fn start_with_config(config_path: &str) -> Self {
+        println!(
+            "Starting docker-compose cluster with config: {}",
+            config_path
+        );
 
         // First, make sure we're starting clean
         let _ = Command::new("make")
@@ -28,6 +35,7 @@ impl Cluster {
 
         let mut cluster = Command::new("make")
             .args(["-C", "../", "run"])
+            .env("MRCON_CONFIG_PATH", config_path)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
@@ -347,7 +355,12 @@ async fn wait_for_metrics() {
     "tests/data/simple/connections.yaml"
 )]
 async fn test_default_config(#[case] config: &str, #[case] connections: &str) {
-    let mut cluster = Cluster::start();
+    // let config_path = std::path::Path::new("mrcond")
+    //     .join(config)
+    //     .canonicalize()
+    //     .expect("Failed to resolve absolute path for config file");
+    let config_path = format!("./mrcond/{}", config);
+    let mut cluster = Cluster::start_with_config(config_path.as_str());
 
     wait_for_metrics().await;
 

@@ -1,6 +1,6 @@
 # Makefile for mongodb-rabbitmq-connector workspace
 
-.PHONY: all build build-release build-debug clean run check format help venv test test-integration test-integration-quiet test-metrics
+.PHONY: all build build-release build-debug clean run run-with-config check format help venv test test-integration test-integration-quiet test-metrics
 
 all: build-debug
 
@@ -22,6 +22,15 @@ down:
 
 run:
 	docker compose up --build
+
+run-with-config:
+	@echo "Usage: make run-with-config MRCON_CONFIG_PATH=path/to/config.yaml"
+	@if [ -z "$(MRCON_CONFIG_PATH)" ]; then \
+		echo "Error: MRCON_CONFIG_PATH is not set"; \
+		echo "Example: make run-with-config MRCON_CONFIG_PATH=./mrcond/tests/data/simple/config.yaml"; \
+		exit 1; \
+	fi
+	MRCON_CONFIG_PATH=$(MRCON_CONFIG_PATH) docker compose up --build
 
 check:
 	cargo check --workspace
