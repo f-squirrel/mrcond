@@ -17,11 +17,7 @@ struct Cluster {
 }
 
 impl Cluster {
-    fn start() -> Self {
-        Self::start_with_config("./config.yaml")
-    }
-
-    fn start_with_config(config_path: &str) -> Self {
+    fn start(config_path: &str) -> Self {
         println!(
             "Starting docker-compose cluster with config: {}",
             config_path
@@ -355,12 +351,8 @@ async fn wait_for_metrics() {
     "tests/data/simple/connections.yaml"
 )]
 async fn test_default_config(#[case] config: &str, #[case] connections: &str) {
-    // let config_path = std::path::Path::new("mrcond")
-    //     .join(config)
-    //     .canonicalize()
-    //     .expect("Failed to resolve absolute path for config file");
     let config_path = format!("./mrcond/{}", config);
-    let mut cluster = Cluster::start_with_config(config_path.as_str());
+    let mut cluster = Cluster::start(config_path.as_str());
 
     wait_for_metrics().await;
 
