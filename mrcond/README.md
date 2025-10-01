@@ -106,12 +106,12 @@ collections:
           priority: 0
           correlation_id: ""
           reply_to: ""
-          expiration: ""
+          expiration: "500"
           message_id: ""
           timestamp: 0
-          user_id: ""
-          app_id: ""
-          cluster_id: ""
+          user_id: "guest"
+          app_id: "app_id"
+          cluster_id: "cluster_id"
       routing_key: "test_routing_key"
 ```
 
