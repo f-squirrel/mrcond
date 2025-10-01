@@ -79,7 +79,20 @@ impl Publisher {
             .clone()
             .unwrap_or_else(|| config.queue.name.clone());
 
+        channel
+            .queue_declare(
+                &config.queue.name,
+                config.queue.declare_options.into(),
+                FieldTable::default(),
+            )
+            .await?;
+
         if config.exchange != Exchange::default() {
+            tracing::debug!(
+                exchange = %config.exchange.name,
+                kind = %config.exchange.kind,
+                "Declaring exchange"
+            );
             // Declare exchange if exchange_name is specified
             channel
                 .exchange_declare(
@@ -89,6 +102,20 @@ impl Publisher {
                     FieldTable::default(),
                 )
                 .await?;
+
+            tracing::debug!(
+                queue = %config.queue.name,
+                exchange = %config.exchange.name,
+                routing_key = %routing_key,
+                "Declaring and binding queue to exchange"
+            );
+
+            tracing::debug!(
+                queue = %config.queue.name,
+                exchange = %config.exchange.name,
+                routing_key = %routing_key,
+                "Binding queue to exchange"
+            );
 
             channel
                 .queue_bind(
@@ -101,13 +128,6 @@ impl Publisher {
                 .await?;
         }
 
-        channel
-            .queue_declare(
-                &config.queue.name,
-                config.queue.declare_options.into(),
-                FieldTable::default(),
-            )
-            .await?;
         Ok(Self {
             config,
             channel,
