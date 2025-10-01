@@ -1,7 +1,7 @@
 [package]
-name = "mrcon-rabbitmq"
+name = "mrcon-mongodb"
 version = "0.1.0"
-description = "RabbitMQ functionality for mrcon MongoDB to RabbitMQ connector"
+description = "MongoDB functionality for mrcon MongoDB to RabbitMQ connector"
 
 authors.workspace = true
 edition.workspace = true
@@ -11,10 +11,11 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-mrcon-core = { path = "../mrcon-core" }
-mrcon-config = { path = "../mrcon-config" }
-lapin.workspace = true
+mrcon-core = { path = "../core" }
+mrcon-config = { path = "../config" }
 mongodb.workspace = true
+futures-util.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
-async-trait.workspace = true
+thiserror.workspace = true

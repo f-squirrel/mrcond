@@ -15,10 +15,10 @@ default = ["metrics"]
 metrics = ["dep:prometheus"]
 
 [dependencies]
-mrcon-core = { path = "../mrcon-core" }
-mrcon-config = { path = "../mrcon-config" }
-mrcon-rabbitmq = { path = "../mrcon-rabbitmq" }
-mrcon-mongodb = { path = "../mrcon-mongodb" }
+mrcon-core = { path = "../core" }
+mrcon-config = { path = "../config" }
+mrcon-rabbitmq = { path = "../rabbitmq" }
+mrcon-mongodb = { path = "../mongodb" }
 mongodb.workspace = true
 lapin.workspace = true
 futures-util.workspace = true
