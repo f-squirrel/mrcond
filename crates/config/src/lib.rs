@@ -119,6 +119,18 @@ impl From<ExchangeKind> for lapin::ExchangeKind {
     }
 }
 
+impl std::fmt::Display for ExchangeKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExchangeKind::Custom(custom_type) => write!(f, "{}", custom_type),
+            ExchangeKind::Direct => write!(f, "direct"),
+            ExchangeKind::Fanout => write!(f, "fanout"),
+            ExchangeKind::Headers => write!(f, "headers"),
+            ExchangeKind::Topic => write!(f, "topic"),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Clone, Copy, Hash, Eq, PartialEq, Default)]
 #[non_exhaustive]
 pub struct ExchangeDeclareOptions {
