@@ -1,6 +1,6 @@
 [package]
 name = "mrcond"
-version = "0.1.0"
+version = "0.2.0"
 description = "MongoDB to RabbitMQ connector daemon - CLI tool for streaming MongoDB change events to RabbitMQ"
 
 authors.workspace = true
@@ -15,7 +15,7 @@ default = ["metrics"]
 metrics = ["mrcon/metrics", "dep:prometheus", "dep:axum-prometheus"]
 
 [dependencies]
-mrcon = { version = "0.1.0", path = "../crates/mrcon" }
+mrcon = { version = "0.2.0", path = "../crates/mrcon" }
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
