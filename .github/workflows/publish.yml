@@ -14,7 +14,7 @@ jobs:
   #   name: Semantic Version Check
   #   runs-on: ubuntu-latest
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@v5
   #       with:
   #         fetch-depth: 0
   #     - uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -28,7 +28,7 @@ jobs:
   #   runs-on: ubuntu-latest
   #   # needs: semver-check
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@v5
   #     - uses: actions-rust-lang/setup-rust-toolchain@v1
   #     - name: Dry run publish mrcon
   #       run: cargo publish --dry-run -p mrcon
@@ -41,7 +41,7 @@ jobs:
     # needs: publish-dry-run
     environment: cargo
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Publish mrcon to crates.io
         env:
@@ -71,7 +71,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Extract version from tag
