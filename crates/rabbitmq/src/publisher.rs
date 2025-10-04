@@ -74,6 +74,11 @@ impl Publisher {
     async fn init(config: RabbitMq, connection: Arc<Connection>) -> Result<Self, Error> {
         let channel = connection.create_channel().await?;
 
+        // Enable publisher confirmations for reliable message delivery
+        channel
+            .confirm_select(lapin::options::ConfirmSelectOptions::default())
+            .await?;
+
         let routing_key = config
             .routing_key
             .clone()
@@ -136,13 +141,29 @@ impl Publisher {
         })
     }
 
-    /// Publish a MongoDB change event to RabbitMQ as a JSON message.
+    /// Publish a MongoDB change event to RabbitMQ as a JSON message with delivery confirmation.
+    ///
+    /// This method uses RabbitMQ's publisher confirmation mechanism to ensure reliable message delivery.
+    /// It will:
+    /// 1. Serialize the event to JSON
+    /// 2. Publish the message to RabbitMQ
+    /// 3. Wait for broker confirmation (ACK/NACK)
+    /// 4. Return an error if the message was rejected (NACK) or could not be routed
+    ///
+    /// For improved reliability, consider setting these configuration options:
+    /// - `basic_publish_options.mandatory = true` - Get notified if message is unroutable
+    /// - `basic_properties.delivery_mode = 2` - Make messages persistent
+    /// - `queue.declare_options.durable = true` - Make queue survive broker restart
     ///
     /// # Arguments
     /// * `event` - The MongoDB change stream event to publish.
     ///
     /// # Errors
-    /// Returns an error if serialization or publishing fails.
+    /// Returns an error if:
+    /// - JSON serialization fails
+    /// - Network/connection issues occur
+    /// - The broker rejects the message (NACK)
+    /// - The message cannot be routed (when mandatory=true)
     pub async fn publish(&self, event: &ChangeStreamEvent<Document>) -> Result<(), Error> {
         let payload = serde_json::to_vec(event)?;
         let confirm: Confirmation = self
@@ -156,8 +177,30 @@ impl Publisher {
             )
             .await?
             .await?;
-        trace!(queue = %self.config.queue.name, "Published message to RabbitMQ, payload: {}, confirmation: {:?}", serde_json::to_string(event)?, confirm);
-        Ok(())
+
+        // Check if the publish was actually successful
+        match confirm {
+            Confirmation::Ack(_) => {
+                trace!(queue = %self.config.queue.name, "Published message to RabbitMQ successfully, payload: {}", serde_json::to_string(event)?);
+                Ok(())
+            }
+            Confirmation::Nack(nack) => {
+                let error_msg = format!(
+                    "Message was rejected by RabbitMQ broker (NACK received): {:?}",
+                    nack
+                );
+                tracing::error!(queue = %self.config.queue.name, "{}", error_msg);
+                Err(Error::RabbitMq(lapin::Error::from(std::io::Error::new(
+                    std::io::ErrorKind::BrokenPipe,
+                    error_msg,
+                ))))
+            }
+            Confirmation::NotRequested => {
+                // This shouldn't happen in our case since we're awaiting the confirmation
+                tracing::trace!(queue = %self.config.queue.name, "Publisher confirmation was not requested");
+                Ok(())
+            }
+        }
     }
 }
 
