@@ -249,6 +249,8 @@ pub struct Collection {
     pub watched: WatchedDb,
     pub resume_tokens: ResumeTokensDB,
     pub rabbitmq: RabbitMq,
+    #[serde(default)]
+    pub restart_on_failure: bool,
 }
 
 #[derive(Default, Deserialize, Clone)]

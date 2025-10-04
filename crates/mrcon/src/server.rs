@@ -186,7 +186,7 @@ impl Server {
         })?;
 
         connector.connect(&collection.watched.coll_name).await.map_err(|e| {
-            tracing::error!(error = ?e, collection = %coll_name, "Failed to connect to collection");
+            tracing::error!(error = ?e, collection = %coll_name, "Failed to connect collection to rabbitmq");
             Error::Connector {
                 source: e,
                 collection: Some(collection.clone()),
@@ -239,18 +239,27 @@ impl Server {
                     Error::Connector { source, collection } => {
                         let collection =
                             collection.expect("Collection should be present in Connector error");
-                        error!(error = ?source, collection = %collection.watched.coll_name, "Connector task failed, restarting");
+                        error!(error = ?source, collection = %collection.watched.coll_name, "Connector task failed");
 
                         // Record the failure and restart reason
                         let (error_type, restart_reason) = match &source {
                             CoreError::MongoDB(_) => {
-                                info!("Restarting mongo client");
-                                mongo_client = Self::connect_to_mongo(&self.settings).await?;
+                                if collection.restart_on_failure {
+                                    info!("Restarting mongo client");
+                                    mongo_client = Self::connect_to_mongo(&self.settings).await?;
+                                } else {
+                                    warn!("Not restarting mongo client as per configuration");
+                                }
                                 ("mongo_error", "mongo_connection_failed")
                             }
                             CoreError::RabbitMq(_) => {
-                                info!("Restarting RabbitMQ client");
-                                rabbitmq_client = Self::connect_to_rabbitmq(&self.settings).await?;
+                                if collection.restart_on_failure {
+                                    info!("Restarting RabbitMQ client");
+                                    rabbitmq_client =
+                                        Self::connect_to_rabbitmq(&self.settings).await?;
+                                } else {
+                                    warn!("Not restarting RabbitMQ client as per configuration");
+                                }
                                 ("rabbitmq_error", "rabbitmq_connection_failed")
                             }
                             other => {
@@ -264,20 +273,24 @@ impl Server {
                             &collection.watched.db_name,
                             error_type,
                         );
-                        self.metrics.record_task_restart(
-                            &collection.watched.coll_name,
-                            &collection.watched.db_name,
-                            restart_reason,
-                        );
 
-                        join_set.spawn(Server::spawn_task(
-                            collection.clone(),
-                            mongo_client.clone(),
-                            rabbitmq_client.clone(),
-                        ));
-                        self.metrics.record_task_start();
-                        // Update metrics when restarting a task
-                        self.metrics.set_server_count(join_set.len());
+                        if collection.restart_on_failure {
+                            self.metrics.record_task_restart(
+                                &collection.watched.coll_name,
+                                &collection.watched.db_name,
+                                restart_reason,
+                            );
+
+                            info!(error = ?source, collection = %collection.watched.coll_name, "Restaring connector task");
+                            join_set.spawn(Server::spawn_task(
+                                collection.clone(),
+                                mongo_client.clone(),
+                                rabbitmq_client.clone(),
+                            ));
+                            self.metrics.record_task_start();
+                            // Update metrics when restarting a task
+                            self.metrics.set_server_count(join_set.len());
+                        }
                     }
                 },
                 Err(e) => {
