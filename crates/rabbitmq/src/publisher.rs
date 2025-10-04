@@ -76,7 +76,7 @@ impl Publisher {
 
         // Enable publisher confirmations for reliable message delivery
         channel
-            .confirm_select(lapin::options::ConfirmSelectOptions::default())
+            .confirm_select(config.confirm_select_options.into())
             .await?;
 
         let routing_key = config
