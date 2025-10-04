@@ -23,7 +23,15 @@ pub struct RabbitMq {
     #[serde(default)]
     pub exchange: Exchange,
     pub routing_key: Option<String>,
+    #[serde(default)]
+    pub confirm_select_options: ConfirmSelectOptions,
     pub queue: Queue,
+}
+
+#[derive(Debug, Deserialize, Clone, Copy, Hash, Eq, PartialEq, Default)]
+#[non_exhaustive]
+pub struct ConfirmSelectOptions {
+    pub nowait: bool,
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
@@ -182,6 +190,14 @@ impl From<BasicPublishOptions> for lapin::options::BasicPublishOptions {
     }
 }
 
+impl From<ConfirmSelectOptions> for lapin::options::ConfirmSelectOptions {
+    fn from(options: ConfirmSelectOptions) -> Self {
+        Self {
+            nowait: options.nowait,
+        }
+    }
+}
+
 impl From<BasicProperties> for lapin::BasicProperties {
     fn from(props: BasicProperties) -> Self {
         let mut basic_props = Self::default();
@@ -233,6 +249,8 @@ pub struct Collection {
     pub watched: WatchedDb,
     pub resume_tokens: ResumeTokensDB,
     pub rabbitmq: RabbitMq,
+    #[serde(default)]
+    pub restart_on_failure: bool,
 }
 
 #[derive(Default, Deserialize, Clone)]
